@@ -17,6 +17,7 @@ export default function Questions() {
   const [buyPriceValue, setBuyPriceValue] = useState('300000');
   const [constructionYearValue, setConstructionYearValue] = useState('2000');
   const [pricePerSqmValue, setPricePerSqmValue] = useState('2500');
+  const [timelineValue, setTimelineValue] = useState('12');
   const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const germanStates: Record<string, { lat: number; lng: number; zoom: number }> = {
@@ -43,13 +44,14 @@ export default function Questions() {
       id: 'propertyType',
       title: 'What type of property interests you?',
       options: [
-        { value: 'apartment', label: 'Apartment', bgColor: 'bg-gradient-to-br from-purple-400 to-purple-600', icon: '🏢' },
-        { value: 'house', label: 'House', bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600', icon: '🏠' },
-        { value: 'land', label: 'Land', bgColor: 'bg-gradient-to-br from-green-400 to-green-600', icon: '🌍' },
-        { value: 'garage', label: 'Garage', bgColor: 'bg-gradient-to-br from-yellow-400 to-yellow-600', icon: '🚗' },
-        { value: 'office', label: 'Office', bgColor: 'bg-gradient-to-br from-red-400 to-red-600', icon: '💼' },
-        { value: 'dont-know', label: 'Don\'t know yet', bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600', icon: '❓' },
+        { value: 'apartment', label: 'Apartment', image: '/apartment.png' },
+        { value: 'house', label: 'House', image: '/house.png' },
+        { value: 'land', label: 'Land', image: '/land.png' },
+        { value: 'garage', label: 'Garage', image: '/garage.png' },
+        { value: 'office', label: 'Office', image: '/office.png' },
+        { value: 'dont-know', label: 'Don\'t know yet', image: '/dont-know.png' },
       ],
+      isPropertyTypeQuestion: true,
     },
     {
       id: 'location',
@@ -64,12 +66,7 @@ export default function Questions() {
     {
       id: 'timeline',
       title: 'What is your timeline for buying?',
-      options: [
-        { value: 'within-6m', label: 'Within the next 6 months', bgColor: 'bg-gradient-to-br from-red-400 to-red-600', icon: '⏱️' },
-        { value: '6m-1y', label: 'In 6-12 months', bgColor: 'bg-gradient-to-br from-orange-400 to-orange-600', icon: '📅' },
-        { value: '1-2y', label: 'In 1-2 years', bgColor: 'bg-gradient-to-br from-yellow-400 to-yellow-600', icon: '🗓️' },
-        { value: 'open', label: 'No specific timeline', bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600', icon: '∞' },
-      ],
+      isTimelineQuestion: true,
     },
     {
       id: 'familySize',
@@ -428,32 +425,90 @@ export default function Questions() {
                 </p>
               </div>
             </div>
+          ) : question.isTimelineQuestion ? (
+            /* Timeline Question with Slider */
+            <div className="max-w-2xl space-y-8 mb-12">
+              <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">📅</span> Timeline in Months
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  How many months until you want to buy?
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="number"
+                    value={timelineValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 1, 1), 120).toString();
+                      setTimelineValue(value);
+                    }}
+                    placeholder="Months"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                  <span className="text-gray-600 text-lg font-semibold">months</span>
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="1"
+                    max="120"
+                    step="1"
+                    value={timelineValue}
+                    onChange={(e) => setTimelineValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(timelineValue) - 1) / (120 - 1)) * 100
+                      }%, #E5E7EB ${((parseInt(timelineValue) - 1) / (120 - 1)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>1 month</span>
+                    <span>120 months (10 years)</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  {parseInt(timelineValue)} month{parseInt(timelineValue) !== 1 ? 's' : ''}
+                  {parseInt(timelineValue) > 12 && ` (${(parseInt(timelineValue) / 12).toFixed(1)} years)`}
+                </p>
+              </div>
+            </div>
           ) : (
-            /* Options Grid - Apple Style */
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+            /* Property Type Grid - Minimalist Apple Style with Images */
+            <div className={`grid gap-4 mb-12 ${question.id === 'familySize' ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
               {question.options?.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => handleAnswer(option.value)}
-                  className={`relative h-56 rounded-3xl overflow-hidden transition-all duration-300 cursor-pointer group ${
+                  className={`relative h-48 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer group ${
                     answers[question.id] === option.value
-                      ? 'ring-4 ring-[#FF6600] shadow-2xl scale-105'
-                      : 'hover:shadow-xl'
-                  } ${option.bgColor}`}
+                      ? 'ring-3 ring-[#FF6600] shadow-lg'
+                      : 'hover:shadow-md'
+                  } bg-gray-100`}
                 >
-                  {/* Content */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-white z-10">
-                    <div className="text-6xl mb-4">{option.icon}</div>
-                    <p className="text-xl font-semibold text-center leading-tight">{option.label}</p>
-                  </div>
+                  {/* Background Image */}
+                  {'image' in option && option.image && (
+                    <img
+                      src={option.image}
+                      alt={option.label}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
 
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300"></div>
+                  {/* Dark Overlay */}
+                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-all duration-300"></div>
+
+                  {/* Content */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10">
+                    <p className="text-lg font-semibold text-white text-center leading-tight">{option.label}</p>
+                  </div>
 
                   {/* Selected Badge */}
                   {answers[question.id] === option.value && (
-                    <div className="absolute top-4 right-4 bg-white rounded-full p-2 z-20">
-                      <svg className="w-5 h-5 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="absolute top-3 right-3 bg-[#FF6600] rounded-full p-1.5 z-20">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
@@ -509,6 +564,21 @@ export default function Questions() {
                       'squareMeters': sqmValue,
                       'constructionYear': constructionYearValue,
                       'pricePerSqm': pricePerSqmValue,
+                    });
+                    if (currentQuestion < questions.length - 1) {
+                      setCurrentQuestion(currentQuestion + 1);
+                    }
+                  }}
+                  className="px-8 py-3 bg-[#FF6600] text-white rounded-2xl font-semibold hover:bg-[#E55A00] transition-all duration-200 active:scale-95 shadow-lg shadow-orange-200/50"
+                >
+                  {currentQuestion === questions.length - 1 ? 'Show Results' : 'Next'}
+                </button>
+              ) : question.isTimelineQuestion ? (
+                <button
+                  onClick={() => {
+                    setAnswers({
+                      ...answers,
+                      'timeline': timelineValue,
                     });
                     if (currentQuestion < questions.length - 1) {
                       setCurrentQuestion(currentQuestion + 1);
