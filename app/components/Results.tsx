@@ -374,18 +374,52 @@ export default function Results() {
 
   const nextImage = (propertyId: string, imageCount: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setImageIndexes(prev => ({
-      ...prev,
-      [propertyId]: ((prev[propertyId] || 0) + 1) % imageCount
-    }));
+    setImageIndexes(prev => {
+      const currentIndex = prev[propertyId] || 0;
+      let nextIndex = (currentIndex + 1) % imageCount;
+      
+      // Skip failed images - find next working image
+      let attempts = 0;
+      while (failedImages[propertyId]?.has(nextIndex) && attempts < imageCount) {
+        nextIndex = (nextIndex + 1) % imageCount;
+        attempts++;
+      }
+      
+      // If all images failed, just go to next index anyway
+      if (attempts >= imageCount) {
+        nextIndex = (currentIndex + 1) % imageCount;
+      }
+      
+      return {
+        ...prev,
+        [propertyId]: nextIndex
+      };
+    });
   };
 
   const prevImage = (propertyId: string, imageCount: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setImageIndexes(prev => ({
-      ...prev,
-      [propertyId]: ((prev[propertyId] || 0) - 1 + imageCount) % imageCount
-    }));
+    setImageIndexes(prev => {
+      const currentIndex = prev[propertyId] || 0;
+      let prevIndex = (currentIndex - 1 + imageCount) % imageCount;
+      
+      // Skip failed images - find previous working image
+      let attempts = 0;
+      while (failedImages[propertyId]?.has(prevIndex) && attempts < imageCount) {
+        prevIndex = (prevIndex - 1 + imageCount) % imageCount;
+        attempts++;
+      }
+      
+      // If all images failed, just go to previous index anyway
+      if (attempts >= imageCount) {
+        prevIndex = (currentIndex - 1 + imageCount) % imageCount;
+      }
+      
+      return {
+        ...prev,
+        [propertyId]: prevIndex
+      };
+    });
   };
 
   const getPropertyType = (property: Property) => {
@@ -598,7 +632,22 @@ export default function Results() {
           ) : properties.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {properties.map((property) => {
+                {properties
+                  .filter((property) => {
+                    // Filter out properties with no images
+                    if (!property.images || property.images.length === 0) {
+                      return false;
+                    }
+                    
+                    // Filter out properties where all images have failed
+                    const propertyFailed = failedImages[property.id];
+                    if (propertyFailed && property.images.every((_, idx) => propertyFailed.has(idx))) {
+                      return false;
+                    }
+                    
+                    return true;
+                  })
+                  .map((property) => {
                 const monthlyCosts = calculateMonthlyTotal(property);
                 return (
                 <div
@@ -658,6 +707,29 @@ export default function Results() {
                                   newFailed[property.id].add(currentIndex);
                                   return newFailed;
                                 });
+                                
+                                // Automatically advance to next working image
+                                if (property.images && property.images.length > 1) {
+                                  let nextIndex = (currentIndex + 1) % property.images.length;
+                                  let attempts = 0;
+                                  
+                                  // Find next non-failed image
+                                  const currentFailed = failedImages[property.id] || new Set();
+                                  currentFailed.add(currentIndex); // Include current as failed
+                                  
+                                  while (currentFailed.has(nextIndex) && attempts < property.images.length) {
+                                    nextIndex = (nextIndex + 1) % property.images.length;
+                                    attempts++;
+                                  }
+                                  
+                                  // Only advance if we found a working image
+                                  if (attempts < property.images.length) {
+                                    setImageIndexes(prev => ({
+                                      ...prev,
+                                      [property.id]: nextIndex
+                                    }));
+                                  }
+                                }
                               }}
                             />
                           );
@@ -1257,6 +1329,29 @@ export default function Results() {
                             newFailed[selectedProperty.id].add(currentIndex);
                             return newFailed;
                           });
+                          
+                          // Automatically advance to next working image
+                          if (selectedProperty.images && selectedProperty.images.length > 1) {
+                            let nextIndex = (currentIndex + 1) % selectedProperty.images.length;
+                            let attempts = 0;
+                            
+                            // Find next non-failed image
+                            const currentFailed = failedImages[selectedProperty.id] || new Set();
+                            currentFailed.add(currentIndex); // Include current as failed
+                            
+                            while (currentFailed.has(nextIndex) && attempts < selectedProperty.images.length) {
+                              nextIndex = (nextIndex + 1) % selectedProperty.images.length;
+                              attempts++;
+                            }
+                            
+                            // Only advance if we found a working image
+                            if (attempts < selectedProperty.images.length) {
+                              setImageIndexes(prev => ({
+                                ...prev,
+                                [selectedProperty.id]: nextIndex
+                              }));
+                            }
+                          }
                         }}
                       />
                     );

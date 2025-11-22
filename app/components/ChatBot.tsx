@@ -124,10 +124,18 @@ export default function ChatBot() {
     const userMessage = trimmedInput;
     setInputValue("");
 
-    // Capture screenshot (temporarily disabled for faster response)
+    // Capture screenshot of the page
     let screenshot = null;
-    // Screenshot feature temporarily disabled to ensure fast chat responses
-    // Will re-enable after confirming chat works properly
+    try {
+      const element = document.body;
+      screenshot = await htmlToImage.toPng(element, {
+        cacheBust: true,
+        pixelRatio: 1, // Keep it at 1 for faster processing
+      });
+    } catch (error) {
+      console.error('Error capturing screenshot:', error);
+      // Continue without screenshot if capture fails
+    }
 
     // Add user message
     const newMessages = [...messages, { role: "user" as const, content: userMessage }];
