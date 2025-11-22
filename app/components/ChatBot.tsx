@@ -114,16 +114,16 @@ export default function ChatBot() {
           <div className="relative z-10">
             <svg
               className="w-5 h-5"
-              fill="none"
+              fill="currentColor"
               viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+              <circle cx="8.5" cy="10.5" r="1.5"/>
+              <circle cx="15.5" cy="10.5" r="1.5"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+              <circle cx="8" cy="10" r="1"/>
+              <circle cx="16" cy="10" r="1"/>
+              <path d="M8 13.5c0 2.21 1.79 4 4 4s4-1.79 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
             </svg>
           </div>
         </button>
@@ -157,16 +157,13 @@ export default function ChatBot() {
               <div className="w-11 h-11 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/25 shadow-lg">
                 <svg
                   className="w-5 h-5 animate-pulse-soft"
-                  fill="none"
+                  fill="currentColor"
                   viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
+                  <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <circle cx="8" cy="10" r="1"/>
+                  <circle cx="16" cy="10" r="1"/>
+                  <path d="M8 13.5c0 2.21 1.79 4 4 4s4-1.79 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
                 </svg>
               </div>
               
@@ -285,7 +282,7 @@ export default function ChatBot() {
                   flex items-center justify-center shadow-md"
               >
                 <svg
-                  className="w-5 h-5"
+                  className={`w-5 h-5 transition-transform duration-700 ease-in-out ${inputValue.trim() ? 'rotate-90' : 'rotate-0'}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
