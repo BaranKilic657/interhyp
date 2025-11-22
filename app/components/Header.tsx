@@ -73,18 +73,17 @@ export default function Header() {
             {/* Center Navigation */}
             <nav className="hidden md:flex gap-8 items-center">
               <a
-                href="/baufinanzierung"
+                href="https://www.interhyp.de/baufinanzierung/"
                 className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
               >
                 Baufinanzierung
               </a>
               <a
-                href="/immobilien"
+                href="https://www.interhyp.de/immobiliensuche/"
                 className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium border-b-2 border-[#FF6600]"
               >
                 Immobilien
               </a>
-              <span className="text-sm text-gray-500">neu</span>
               <a
                 href="/personal-guide"
                 className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
@@ -92,13 +91,13 @@ export default function Header() {
                 Personal Guide
               </a>
               <a
-                href="/rechner"
+                href="https://www.interhyp.de/rechner/"
                 className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
               >
                 Rechner
               </a>
               <a
-                href="/ratgeber"
+                href="https://www.interhyp.de/ratgeber/"
                 className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
               >
                 Ratgeber
