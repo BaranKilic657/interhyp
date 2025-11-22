@@ -1,0 +1,18 @@
+
+> interhyp@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use by an unknown process, using available port 3002 instead.
+   ▲ Next.js 16.0.3 (Turbopack)
+   - Local:         http://localhost:3002
+   - Network:       http://10.255.255.254:3002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1305ms
+Screenshot received: No
+Profile snippet: None
+ POST /api/chat 200 in 5.3s (compile: 456ms, render: 4.8s)
+Screenshot received: No
+Profile snippet: None
+ POST /api/chat 200 in 5.1s (compile: 15ms, render: 5.1s)
