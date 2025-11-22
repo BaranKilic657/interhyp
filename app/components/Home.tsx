@@ -24,7 +24,7 @@ export default function Home() {
             >
               {/* Headline */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1C1C1C] leading-tight">
-                Dreaming about your future home?
+                Searching for your future home?
                 <br />
                 <span className="text-[#FF6600]">Let's find it 😎</span>
               </h1>
