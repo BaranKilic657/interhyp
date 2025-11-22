@@ -516,6 +516,7 @@ export default function Questions() {
                     <img
                       src={option.image}
                       alt={option.label}
+                      loading="eager"
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   )}
