@@ -10,7 +10,6 @@ interface MapProps {
 export default function MapComponent({ location, zoom }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const circleInstance = useRef<any>(null);
   const [debouncedLocation, setDebouncedLocation] = useState(location);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -80,32 +79,12 @@ export default function MapComponent({ location, zoom }: MapProps) {
               }
               
               mapInstance.current.flyTo([latNum, lonNum], zoomLevel, { duration: 2 });
-
-              // Remove old circle if exists
-              if (circleInstance.current) {
-                mapInstance.current.removeLayer(circleInstance.current);
-              }
-
-              // Add red circle only for cities and towns
-              if (type === 'city' || type === 'town') {
-                circleInstance.current = L.circle([latNum, lonNum], {
-                  color: '#DC2626',
-                  fillColor: '#DC2626',
-                  fillOpacity: 0.1,
-                  weight: 3,
-                  radius: 15000, // 15km in meters
-                }).addTo(mapInstance.current);
-              }
             }
           })
           .catch((err) => console.error('Geocoding error:', err));
       } else {
         // Reset to Germany
         mapInstance.current.flyTo([51.1657, 10.4515], 4, { duration: 2 });
-        if (circleInstance.current) {
-          mapInstance.current.removeLayer(circleInstance.current);
-          circleInstance.current = null;
-        }
       }
     };
 
