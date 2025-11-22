@@ -603,12 +603,26 @@ export async function POST(request: NextRequest) {
         
         return {
           ...property,
-          valueScore: Math.round(valueScore)
+          valueScore: Math.round(valueScore),
+          hasImages: property.images && property.images.length > 0
         };
       });
       
-      // Sort by value score (highest first)
-      finalResults.sort((a: any, b: any) => (b.valueScore || 0) - (a.valueScore || 0));
+      // Sort by value score (highest first), then by image availability
+      finalResults.sort((a: any, b: any) => {
+        const scoreA = a.valueScore || 0;
+        const scoreB = b.valueScore || 0;
+        const hasImagesA = a.hasImages ? 1 : 0;
+        const hasImagesB = b.hasImages ? 1 : 0;
+        
+        // Primary sort by value score
+        if (scoreB !== scoreA) {
+          return scoreB - scoreA;
+        }
+        
+        // Secondary sort by image availability (properties with images first)
+        return hasImagesB - hasImagesA;
+      });
       
       // Paginate after sorting for consistency
       const startIndex = (page - 1) * size;
@@ -617,10 +631,38 @@ export async function POST(request: NextRequest) {
       console.log('Top 5 value scores:', finalResults.slice(0, 5).map((p: any) => ({
         title: p.title?.substring(0, 50),
         valueScore: p.valueScore,
+        hasImages: p.hasImages,
         price: p.buyingPrice,
         rooms: p.rooms,
         sqm: p.squareMeter
       })));
+    } else {
+      // For non-bestValue sorts, still prioritize properties with images
+      finalResults = filteredResults.map((property: any) => ({
+        ...property,
+        hasImages: property.images && property.images.length > 0
+      }));
+      
+      // Sort properties: those with images first, then by the requested sort
+      finalResults.sort((a: any, b: any) => {
+        const hasImagesA = a.hasImages ? 1 : 0;
+        const hasImagesB = b.hasImages ? 1 : 0;
+        
+        // Primary sort: images first
+        if (hasImagesB !== hasImagesA) {
+          return hasImagesB - hasImagesA;
+        }
+        
+        // Secondary sort: by requested field
+        const aValue = a[sortKey] || 0;
+        const bValue = b[sortKey] || 0;
+        
+        if (sortBy === 'asc') {
+          return aValue - bValue;
+        } else {
+          return bValue - aValue;
+        }
+      });
     }
 
     // Return the properties data in the format the frontend expects
