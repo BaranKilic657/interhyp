@@ -14,6 +14,9 @@ export default function Questions() {
   const [budgetValue, setBudgetValue] = useState('250000');
   const [roomsValue, setRoomsValue] = useState('3');
   const [sqmValue, setSqmValue] = useState('120');
+  const [buyPriceValue, setBuyPriceValue] = useState('300000');
+  const [constructionYearValue, setConstructionYearValue] = useState('2000');
+  const [pricePerSqmValue, setPricePerSqmValue] = useState('2500');
   const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const germanStates: Record<string, { lat: number; lng: number; zoom: number }> = {
@@ -40,10 +43,12 @@ export default function Questions() {
       id: 'propertyType',
       title: 'What type of property interests you?',
       options: [
-        { value: 'house', label: 'Single-family house', bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600', icon: '🏠' },
         { value: 'apartment', label: 'Apartment', bgColor: 'bg-gradient-to-br from-purple-400 to-purple-600', icon: '🏢' },
-        { value: 'townhouse', label: 'Townhouse', bgColor: 'bg-gradient-to-br from-pink-400 to-pink-600', icon: '🏘️' },
-        { value: 'not-sure', label: 'Not sure yet', bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600', icon: '❓' },
+        { value: 'house', label: 'House', bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600', icon: '🏠' },
+        { value: 'land', label: 'Land', bgColor: 'bg-gradient-to-br from-green-400 to-green-600', icon: '🌍' },
+        { value: 'garage', label: 'Garage', bgColor: 'bg-gradient-to-br from-yellow-400 to-yellow-600', icon: '🚗' },
+        { value: 'office', label: 'Office', bgColor: 'bg-gradient-to-br from-red-400 to-red-600', icon: '💼' },
+        { value: 'dont-know', label: 'Don\'t know yet', bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600', icon: '❓' },
       ],
     },
     {
@@ -235,26 +240,26 @@ export default function Questions() {
               </div>
             </div>
           ) : question.isPropertyDetailsQuestion ? (
-            /* Combined Property Details: Budget, Rooms, Square Meters */
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              {/* Budget Section */}
+            /* Combined Property Details: Buy Price, Square Meters, Construction Year, Price per m² */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+              {/* Buy Price Section */}
               <div className="space-y-4 p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-3xl">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <span className="text-2xl">💶</span> Budget
+                  <span className="text-2xl">💶</span> Buy Price
                 </h3>
                 <label className="block text-sm font-medium text-gray-700">
-                  Budget in EUR
+                  Price in EUR
                 </label>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-gray-600">€</span>
                   <input
                     type="number"
-                    value={budgetValue}
+                    value={buyPriceValue}
                     onChange={(e) => {
                       const value = Math.min(Math.max(parseInt(e.target.value) || 0, 50000), 10000000).toString();
-                      setBudgetValue(value);
+                      setBuyPriceValue(value);
                     }}
-                    placeholder="Enter budget"
+                    placeholder="Enter price"
                     className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
                   />
                 </div>
@@ -265,13 +270,13 @@ export default function Questions() {
                     min="50000"
                     max="10000000"
                     step="50000"
-                    value={budgetValue}
-                    onChange={(e) => setBudgetValue(e.target.value)}
+                    value={buyPriceValue}
+                    onChange={(e) => setBuyPriceValue(e.target.value)}
                     className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                     style={{
                       background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
-                        ((parseInt(budgetValue) - 50000) / (10000000 - 50000)) * 100
-                      }%, #E5E7EB ${((parseInt(budgetValue) - 50000) / (10000000 - 50000)) * 100}%, #E5E7EB 100%)`
+                        ((parseInt(buyPriceValue) - 50000) / (10000000 - 50000)) * 100
+                      }%, #E5E7EB ${((parseInt(buyPriceValue) - 50000) / (10000000 - 50000)) * 100}%, #E5E7EB 100%)`
                     }}
                   />
                   <div className="flex justify-between text-xs text-gray-600">
@@ -280,63 +285,17 @@ export default function Questions() {
                   </div>
                 </div>
                 <p className="text-sm font-semibold text-[#FF6600] pt-2">
-                  €{Number(budgetValue).toLocaleString('de-DE')}
-                </p>
-              </div>
-
-              {/* Rooms Section */}
-              <div className="space-y-4 p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-3xl">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <span className="text-2xl">🛏️</span> Rooms
-                </h3>
-                <label className="block text-sm font-medium text-gray-700">
-                  Number of Rooms
-                </label>
-                <div className="flex items-center gap-2 mb-2">
-                  <input
-                    type="number"
-                    value={roomsValue}
-                    onChange={(e) => {
-                      const value = Math.min(Math.max(parseInt(e.target.value) || 1, 1), 12).toString();
-                      setRoomsValue(value);
-                    }}
-                    placeholder="Rooms"
-                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <input
-                    type="range"
-                    min="1"
-                    max="12"
-                    step="1"
-                    value={roomsValue}
-                    onChange={(e) => setRoomsValue(e.target.value)}
-                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                    style={{
-                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
-                        ((parseInt(roomsValue) - 1) / (12 - 1)) * 100
-                      }%, #E5E7EB ${((parseInt(roomsValue) - 1) / (12 - 1)) * 100}%, #E5E7EB 100%)`
-                    }}
-                  />
-                  <div className="flex justify-between text-xs text-gray-600">
-                    <span>1</span>
-                    <span>12</span>
-                  </div>
-                </div>
-                <p className="text-sm font-semibold text-[#FF6600] pt-2">
-                  {roomsValue} {parseInt(roomsValue) === 1 ? 'Room' : 'Rooms'}
+                  €{Number(buyPriceValue).toLocaleString('de-DE')}
                 </p>
               </div>
 
               {/* Square Meters Section */}
               <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-3xl">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <span className="text-2xl">📐</span> Size
+                  <span className="text-2xl">📐</span> Square Meters
                 </h3>
                 <label className="block text-sm font-medium text-gray-700">
-                  Square Meters (m²)
+                  Size in m²
                 </label>
                 <div className="flex items-center gap-2 mb-2">
                   <input
@@ -373,6 +332,99 @@ export default function Questions() {
                 </div>
                 <p className="text-sm font-semibold text-[#FF6600] pt-2">
                   {sqmValue} m²
+                </p>
+              </div>
+
+              {/* Construction Year Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">🏗️</span> Construction Year
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Year Built
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="number"
+                    value={constructionYearValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 1900, 1900), 2024).toString();
+                      setConstructionYearValue(value);
+                    }}
+                    placeholder="Year"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="1900"
+                    max="2024"
+                    step="1"
+                    value={constructionYearValue}
+                    onChange={(e) => setConstructionYearValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(constructionYearValue) - 1900) / (2024 - 1900)) * 100
+                      }%, #E5E7EB ${((parseInt(constructionYearValue) - 1900) / (2024 - 1900)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>1900</span>
+                    <span>2024</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  {constructionYearValue}
+                </p>
+              </div>
+
+              {/* Price per m² Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">💰</span> Price per m²
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  EUR per m²
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-gray-600">€</span>
+                  <input
+                    type="number"
+                    value={pricePerSqmValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 0, 500), 50000).toString();
+                      setPricePerSqmValue(value);
+                    }}
+                    placeholder="EUR/m²"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="500"
+                    max="50000"
+                    step="500"
+                    value={pricePerSqmValue}
+                    onChange={(e) => setPricePerSqmValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(pricePerSqmValue) - 500) / (50000 - 500)) * 100
+                      }%, #E5E7EB ${((parseInt(pricePerSqmValue) - 500) / (50000 - 500)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>€500/m²</span>
+                    <span>€50k/m²</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  €{Number(pricePerSqmValue).toLocaleString('de-DE')}/m²
                 </p>
               </div>
             </div>
@@ -453,9 +505,10 @@ export default function Questions() {
                   onClick={() => {
                     setAnswers({
                       ...answers,
-                      'budget': budgetValue,
-                      'rooms': roomsValue,
+                      'buyPrice': buyPriceValue,
                       'squareMeters': sqmValue,
+                      'constructionYear': constructionYearValue,
+                      'pricePerSqm': pricePerSqmValue,
                     });
                     if (currentQuestion < questions.length - 1) {
                       setCurrentQuestion(currentQuestion + 1);
