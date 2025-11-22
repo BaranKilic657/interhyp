@@ -47,7 +47,8 @@ export default function Questions() {
         { value: 'house', label: 'House', bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600', icon: '🏠' },
         { value: 'land', label: 'Land', bgColor: 'bg-gradient-to-br from-green-400 to-green-600', icon: '🌍' },
         { value: 'garage', label: 'Garage', bgColor: 'bg-gradient-to-br from-yellow-400 to-yellow-600', icon: '🚗' },
-        { value: 'office', label: 'Office', bgColor: 'bg-gradient-to-br from-red-400 to-red-600', icon: '🏢' },
+        { value: 'office', label: 'Office', bgColor: 'bg-gradient-to-br from-red-400 to-red-600', icon: '💼' },
+        { value: 'dont-know', label: 'Don\'t know yet', bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600', icon: '❓' },
       ],
     },
     {
