@@ -31,9 +31,7 @@ export default function Home() {
 
               {/* Subheadline */}
               <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-xl">
-                Meet your <strong className="text-[#1C1C1C]">Future Home Twin</strong> — a smart
-                guide that turns your dreams, data, and life choices into a clear, achievable path
-                to homeownership.
+                Meet your <strong className="text-[#1C1C1C]">Personal Guide</strong> — your trusted pathfinder from first idea to front door
               </p>
 
               {/* CTA Section */}
@@ -63,16 +61,11 @@ export default function Home() {
                       </svg>
                     </span>
                   </button>
-                </Link>
+                
 
-                <Link
-                  href="/how-it-works"
-                  className="text-[#1C1C1C] font-medium text-lg hover:text-[#FF6600] transition-colors underline-offset-4 hover:underline"
-                >
-                  How it works
-                </Link>
-              </div>
-            </div>
+                
+              
+      
 
             {/* Right Visual - Animated Home */}
             <div className="relative flex items-center justify-center lg:justify-end">
