@@ -86,6 +86,12 @@ export default function Header() {
               </a>
               <span className="text-sm text-gray-500">neu</span>
               <a
+                href="/personal-guide"
+                className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
+              >
+                Personal Guide
+              </a>
+              <a
                 href="/rechner"
                 className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
               >
@@ -96,12 +102,6 @@ export default function Header() {
                 className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
               >
                 Ratgeber
-              </a>
-              <a
-                href="/uber-uns"
-                className="text-gray-700 hover:text-[#FF6600] transition-colors font-medium"
-              >
-                Über uns
               </a>
             </nav>
 
