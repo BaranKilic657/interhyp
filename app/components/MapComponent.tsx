@@ -10,6 +10,7 @@ interface MapProps {
 export default function MapComponent({ location, zoom }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
+  const circleInstance = useRef<any>(null);
   const [debouncedLocation, setDebouncedLocation] = useState(location);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -60,14 +61,51 @@ export default function MapComponent({ location, zoom }: MapProps) {
           .then((res) => res.json())
           .then((data) => {
             if (data && data.length > 0) {
-              const { lat, lon, name } = data[0];
-              mapInstance.current.flyTo([parseFloat(lat), parseFloat(lon)], zoom, { duration: 2 });
+              const { lat, lon, type, name } = data[0];
+              const latNum = parseFloat(lat);
+              const lonNum = parseFloat(lon);
+              
+              // Determine zoom level based on result type
+              let zoomLevel = 14; // Default higher zoom
+              if (type === 'city' || type === 'town') {
+                zoomLevel = 13; // Cities
+              } else if (type === 'administrative') {
+                zoomLevel = 12; // States/regions
+              } else if (type === 'village' || type === 'hamlet') {
+                zoomLevel = 18; // Villages zoom in closer
+              } else if (type === 'house' || type === 'building' || type === 'amenity') {
+                zoomLevel = 17; // Buildings/amenities zoom in very close
+              } else if (type === 'street' || type === 'road') {
+                zoomLevel = 16; // Streets
+              }
+              
+              mapInstance.current.flyTo([latNum, lonNum], zoomLevel, { duration: 2 });
+
+              // Remove old circle if exists
+              if (circleInstance.current) {
+                mapInstance.current.removeLayer(circleInstance.current);
+              }
+
+              // Add red circle only for cities and towns
+              if (type === 'city' || type === 'town') {
+                circleInstance.current = L.circle([latNum, lonNum], {
+                  color: '#DC2626',
+                  fillColor: '#DC2626',
+                  fillOpacity: 0.1,
+                  weight: 3,
+                  radius: 15000, // 15km in meters
+                }).addTo(mapInstance.current);
+              }
             }
           })
           .catch((err) => console.error('Geocoding error:', err));
       } else {
         // Reset to Germany
         mapInstance.current.flyTo([51.1657, 10.4515], 4, { duration: 2 });
+        if (circleInstance.current) {
+          mapInstance.current.removeLayer(circleInstance.current);
+          circleInstance.current = null;
+        }
       }
     };
 

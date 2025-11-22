@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import MapComponent from './MapComponent';
 
@@ -8,8 +8,10 @@ export default function Questions() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [locationInput, setLocationInput] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [mapZoom, setMapZoom] = useState(4);
-  const [mapCenter, setMapCenter] = useState({ lat: 51.1657, lng: 10.4515 }); // Germany center
+  const [mapCenter, setMapCenter] = useState({ lat: 51.1657, lng: 10.4515 });
+  const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const germanStates: Record<string, { lat: number; lng: number; zoom: number }> = {
     'Baden-Württemberg': { lat: 48.6616, lng: 9.3501, zoom: 8 },
@@ -81,6 +83,54 @@ export default function Questions() {
   const handleLocationChange = (input: string) => {
     setLocationInput(input);
     
+    // Clear previous timer
+    if (suggestionTimerRef.current) {
+      clearTimeout(suggestionTimerRef.current);
+    }
+
+    if (input.length > 1) {
+      // Debounce with shorter delay (200ms)
+      suggestionTimerRef.current = setTimeout(() => {
+        // Use better Nominatim parameters for German locations
+        fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&countrycodes=de&limit=12&type=city,town,village,postcode,suburb,district&namedetails=1`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            if (data && data.length > 0) {
+              // Sort and filter intelligently
+              const processedSuggestions = data
+                .map((item: any) => ({
+                  name: item.name,
+                  type: item.type,
+                  importance: item.importance || 0,
+                  isPrefixMatch: item.name.toLowerCase().startsWith(input.toLowerCase()),
+                }))
+                // Prioritize prefix matches and more important results
+                .sort((a: any, b: any) => {
+                  if (a.isPrefixMatch !== b.isPrefixMatch) {
+                    return a.isPrefixMatch ? -1 : 1;
+                  }
+                  return b.importance - a.importance;
+                })
+                // Remove duplicates and get unique names
+                .filter((item: any, index: number, self: any) => 
+                  index === self.findIndex((t: any) => t.name === item.name)
+                )
+                .slice(0, 8) // Limit to 8 suggestions
+                .map((item: any) => item.name);
+
+              setLocationSuggestions(processedSuggestions);
+            } else {
+              setLocationSuggestions([]);
+            }
+          })
+          .catch(() => setLocationSuggestions([]));
+      }, 200); // Faster debounce
+    } else {
+      setLocationSuggestions([]);
+    }
+    
     // Check if input matches a state
     for (const [state, coords] of Object.entries(germanStates)) {
       if (state.toLowerCase().includes(input.toLowerCase()) || input.toLowerCase().includes(state.toLowerCase())) {
@@ -150,7 +200,7 @@ export default function Questions() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
               {/* Input Section */}
               <div className="flex flex-col justify-center space-y-4">
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     State, City or Postal Code
                   </label>
@@ -158,9 +208,24 @@ export default function Questions() {
                     type="text"
                     value={locationInput}
                     onChange={(e) => handleLocationChange(e.target.value)}
-                    placeholder="e.g., Bayern, Berlin, 80331..."
-                    className="w-full px-6 py-4 rounded-2xl border-2 border-gray-200 focus:border-[#FF6600] focus:outline-none text-lg transition-colors"
+                    placeholder="e.g., München, Berlin, 80331, Charlottenburg..."
+                    className="w-full px-6 py-4 rounded-2xl border-2 border-gray-200 focus:border-[#FF6600] focus:outline-none text-lg font-medium transition-colors placeholder:text-gray-500 text-black"
                   />
+                  
+                  {/* Autocomplete Suggestions */}
+                  {locationInput && locationSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-2xl shadow-lg z-50">
+                      {locationSuggestions.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleLocationChange(suggestion)}
+                          className="w-full text-left px-6 py-3 hover:bg-gray-100 border-b border-gray-100 last:border-b-0 text-black font-medium transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600">
                   Enter a German state name, city, or postal code to see it on the map.
