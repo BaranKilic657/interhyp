@@ -63,16 +63,11 @@ export default function Home() {
                       </svg>
                     </span>
                   </button>
-                </Link>
+                
 
-                <Link
-                  href="/how-it-works"
-                  className="text-[#1C1C1C] font-medium text-lg hover:text-[#FF6600] transition-colors underline-offset-4 hover:underline"
-                >
-                  How it works
-                </Link>
-              </div>
-            </div>
+                
+              
+      
 
             {/* Right Visual - Animated Home */}
             <div className="relative flex items-center justify-center lg:justify-end">
