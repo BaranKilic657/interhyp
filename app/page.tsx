@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import Home from "./components/Home";
 
 export default function Page() {
-  redirect("/home");
+  return <Home />;
 }
