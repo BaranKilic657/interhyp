@@ -114,6 +114,7 @@ export default function Results() {
   const propertyType = searchParams.get('propertyType') || 'apartment';
   const location = searchParams.get('location') || 'Munich';
   const budget = searchParams.get('budget') || '400000';
+  const calculatedMaxPrice = searchParams.get('budget') || '400000'; // Using budget as calculatedMaxPrice from budget calculator
   const rooms = searchParams.get('rooms') || '3';
   const sqm = searchParams.get('sqm') || '120';
   const timeline = searchParams.get('timeline') || '1-2y';
