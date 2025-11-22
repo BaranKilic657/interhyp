@@ -61,11 +61,9 @@ export default function Home() {
                       </svg>
                     </span>
                   </button>
-                
-
-                
-              
-      
+                </Link>
+              </div>
+            </div>
 
             {/* Right Visual - Animated Home */}
             <div className="relative flex items-center justify-center lg:justify-end">
