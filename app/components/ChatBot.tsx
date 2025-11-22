@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import * as htmlToImage from "html-to-image";
+
+// Configuration
+const SHOW_SCREENSHOTS_IN_CHAT = false; // Set to true to display screenshots in chat messages
+const ENABLE_SCREENSHOTS_FROM_PERSONAL_GUIDE = false; // Set to true to capture screenshots from personal-guide questions
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,56 +49,40 @@ export default function ChatBot() {
         setIsTyping(true);
 
         try {
-          // Capture screenshot
-          let screenshot = null;
-          try {
-            // Try to find main content, fallback to body
-            const mainElement = document.querySelector('main') || document.body;
-            
-            // Temporarily hide chatbot to avoid capturing it
-            const chatbotElements = document.querySelectorAll('[class*="fixed"][class*="bottom-6"][class*="right-6"]');
-            const originalDisplays: string[] = [];
-            chatbotElements.forEach((el) => {
-              originalDisplays.push((el as HTMLElement).style.display);
-              (el as HTMLElement).style.display = 'none';
-            });
-            
-            screenshot = await htmlToImage.toPng(mainElement as HTMLElement, {
-              cacheBust: true,
-              pixelRatio: 1,
-              skipFonts: true,
-              preferredFontFormat: 'woff2',
-              includeQueryParams: true,
-              filter: (node) => {
-                // Only filter out the chatbot itself
-                if (node instanceof HTMLElement) {
-                  // Check if it's part of the chatbot by checking parent chain
-                  let current: HTMLElement | null = node;
-                  while (current) {
-                    const ariaLabel = current.getAttribute('aria-label');
-                    if (ariaLabel && (ariaLabel.includes('chat') || ariaLabel.includes('Chat'))) {
-                      return false;
-                    }
-                    current = current.parentElement;
-                  }
-                }
-                return true;
+          // Capture screenshot using Puppeteer API (disabled for personal-guide by default)
+          let screenshot: string | null = null;
+          if (ENABLE_SCREENSHOTS_FROM_PERSONAL_GUIDE) {
+            try {
+              const currentUrl = window.location.href;
+              const screenshotResponse = await fetch('/api/screenshot', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
               },
+              body: JSON.stringify({ url: currentUrl }),
             });
-            
-            // Restore chatbot visibility
-            chatbotElements.forEach((el, i) => {
-              (el as HTMLElement).style.display = originalDisplays[i];
-            });
-            
-            // Save screenshot for this message
-            if (screenshot) {
-              setScreenshots(prev => ({ ...prev, [newMessages.length - 1]: screenshot! }));
-              console.log('Screenshot captured successfully');
+
+            if (screenshotResponse.ok) {
+              const screenshotData = await screenshotResponse.json();
+              screenshot = screenshotData.screenshot;
+              
+              const updatedIndex = newMessages.length;
+              if (screenshot) {
+                setScreenshots((prev) => ({
+                  ...prev,
+                  [updatedIndex - 1]: screenshot as string,
+                }));
+                console.log('Screenshot captured successfully using Puppeteer');
+              }
+            } else {
+              console.error('Screenshot API failed:', await screenshotResponse.text());
             }
-          } catch (error) {
-            console.error('Error capturing screenshot:', error);
-            console.log('Continuing without screenshot due to rendering issues');
+            } catch (err) {
+              console.error('Screenshot failed:', err);
+              console.log('Continuing without screenshot due to API issues');
+            }
+          } else {
+            console.log('Screenshots disabled for personal-guide questions');
           }
 
           // Try to extract profile text
@@ -108,7 +95,7 @@ export default function ChatBot() {
             // ignore
           }
 
-          // Call the AI API
+          // Call the AI API (don't send screenshot from personal-guide)
           const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
@@ -116,7 +103,7 @@ export default function ChatBot() {
             },
             body: JSON.stringify({
               messages: newMessages,
-              screenshot: screenshot,
+              screenshot: null, // Always null for personal-guide questions
               profile: profileText,
             }),
           });
@@ -145,7 +132,7 @@ export default function ChatBot() {
                   if (done) break;
                   
                   const chunk = decoder.decode(value, { stream: true });
-                  const lines = chunk.split('\\n');
+                  const lines = chunk.split('\n');
                   
                   for (const line of lines) {
                     if (line.startsWith('data: ')) {
@@ -240,56 +227,36 @@ export default function ChatBot() {
     const userMessage = trimmedInput;
     setInputValue("");
 
-    // Capture screenshot of the page
-    let screenshot = null;
+    // Capture screenshot of the page using Puppeteer API
+    let screenshot: string | null = null;
     try {
-      // Try to find main content, fallback to body
-      const mainElement = document.querySelector('main') || document.body;
+      const screenshotIndex = messages.length;
+      const currentUrl = window.location.href;
       
-      // Temporarily hide chatbot to avoid capturing it
-      const chatbotElements = document.querySelectorAll('[class*="fixed"][class*="bottom-6"][class*="right-6"]');
-      const originalDisplays: string[] = [];
-      chatbotElements.forEach((el) => {
-        originalDisplays.push((el as HTMLElement).style.display);
-        (el as HTMLElement).style.display = 'none';
-      });
-      
-      screenshot = await htmlToImage.toPng(mainElement as HTMLElement, {
-        cacheBust: true,
-        pixelRatio: 1, // Keep it at 1 for faster processing
-        skipFonts: true,
-        preferredFontFormat: 'woff2',
-        includeQueryParams: true,
-        filter: (node) => {
-          // Only filter out the chatbot itself
-          if (node instanceof HTMLElement) {
-            // Check if it's part of the chatbot by checking parent chain
-            let current: HTMLElement | null = node;
-            while (current) {
-              const ariaLabel = current.getAttribute('aria-label');
-              if (ariaLabel && (ariaLabel.includes('chat') || ariaLabel.includes('Chat'))) {
-                return false;
-              }
-              current = current.parentElement;
-            }
-          }
-          return true;
+      const screenshotResponse = await fetch('/api/screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ url: currentUrl }),
       });
-      
-      // Restore chatbot visibility
-      chatbotElements.forEach((el, i) => {
-        (el as HTMLElement).style.display = originalDisplays[i];
-      });
-      
-      // Save screenshot for this message
-      if (screenshot) {
-        setScreenshots(prev => ({ ...prev, [newMessages.length - 1]: screenshot! }));
-        console.log('Screenshot captured successfully');
+
+      if (screenshotResponse.ok) {
+        const screenshotData = await screenshotResponse.json();
+        screenshot = screenshotData.screenshot;
+        
+        if (screenshot) {
+          setScreenshots((prev) => ({
+            ...prev,
+            [screenshotIndex]: screenshot as string,
+          }));
+          console.log('Screenshot captured successfully using Puppeteer');
+        }
+      } else {
+        console.error('Screenshot API failed:', await screenshotResponse.text());
       }
-    } catch (error) {
-      console.error('Error capturing screenshot:', error);
-      console.log('Continuing without screenshot due to rendering issues');
+    } catch (e) {
+      console.error('Screenshot failed:', e);
       // Continue without screenshot if capture fails
     }
 
@@ -435,7 +402,7 @@ export default function ChatBot() {
   return (
     <>
       {/* Floating Orb */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50" data-chatbot-root="true">
         {/* Tooltip */}
         {showTooltip && !isOpen && (
           <div className="absolute bottom-20 right-0 bg-[#1C1C1C] text-white px-4 py-2.5 rounded-xl text-sm whitespace-nowrap shadow-xl animate-fade-in-up">
@@ -606,7 +573,7 @@ export default function ChatBot() {
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                   
                   {/* Show screenshot if available for this message */}
-                  {message.role === "user" && screenshots[index] && (
+                  {SHOW_SCREENSHOTS_IN_CHAT && message.role === "user" && screenshots[index] && (
                     <div className="mt-3 pt-3 border-t border-white/20">
                       <div className="flex items-center gap-2 mb-2">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
