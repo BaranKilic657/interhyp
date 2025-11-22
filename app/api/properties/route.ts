@@ -1,226 +1,135 @@
-import { NextRequest, NextResponse } from "next/server";
-
-interface Property {
-  id: string;
-  title: string;
-  buyingPrice: number;
-  rooms: number;
-  squareMeter: number;
-  pricePerSqm: number;
-  address: {
-    city: string;
-    postcode: string;
-    displayName: string;
-  };
-  type?: string;
-  images?: Array<{ originalUrl: string; title: string }>;
-  locationFactor?: {
-    score: number;
-    population: number;
-    hasUniversity: boolean;
-  };
-}
-
-const propertyTypeMap: Record<string, string> = {
-  apartment: "APPARTMENTBUY",
-  condo: "APPARTMENTBUY",
-  house: "HOUSEBUY",
-  "multi-family": "HOUSEBUY",
-};
-
-// German transliteration
-const transliterate = (t: string) =>
-  t
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/Ä/g, "Ae")
-    .replace(/Ö/g, "Oe")
-    .replace(/Ü/g, "Ue")
-    .replace(/ß/g, "ss");
-
-// Region mapping
-const regionMap: Record<string, string> = {
-  münchen: "Bayern",
-  muenchen: "Bayern",
-  munich: "Bayern",
-  berlin: "Berlin",
-  hamburg: "Hamburg",
-  köln: "Nordrhein-Westfalen",
-  koeln: "Nordrhein-Westfalen",
-  cologne: "Nordrhein-Westfalen",
-  frankfurt: "Hessen",
-  stuttgart: "Baden-Württemberg",
-};
-
-// 🔥 Concurrency limiter
-async function runInBatches<T>(tasks: (() => Promise<T>)[], limit: number) {
-  const results: T[] = [];
-  let index = 0;
-
-  async function worker() {
-    while (index < tasks.length) {
-      const i = index++;
-      results[i] = await tasks[i]();
-    }
-  }
-
-  const workers = Array(Math.min(limit, tasks.length))
-    .fill(0)
-    .map(() => worker());
-
-  await Promise.all(workers);
-  return results;
-}
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { location, budget, rooms, sqm, propertyType } = body;
+    const { 
+      location,
+      budget,
+      rooms,
+      sqm,
+      propertyType,
+      type,
+      maxPrice,
+      minPrice,
+      size = 20,
+      sortBy = 'asc',
+      sortKey = 'buyingPrice'
+    } = await request.json();
 
-    const thinkImmoType =
-      propertyTypeMap[propertyType?.toLowerCase()] || "APPARTMENTBUY";
+    console.log('=== PROPERTIES API CALLED ===');
+    console.log('Location:', location);
+    console.log('Budget:', budget);
+    console.log('Rooms:', rooms);
+    console.log('Sqm:', sqm);
+    console.log('Property Type:', propertyType);
 
-    const locationLower = (location || "").toLowerCase();
-    const region = regionMap[locationLower] || undefined;
-
-    // Build geoSearch identical to Python
-    const geoSearch: any = {
-      geoSearchQuery: location,
-      geoSearchType: "town",
-    };
-    if (region) geoSearch.region = region;
-
-    const baseRequestBody = {
-      active: true,
-      type: thinkImmoType,
-      sortBy: "asc",
-      sortKey: "buyingPrice",
-      geoSearches: geoSearch,
-    };
-
-    // -------------------------------
-    // 1️⃣ GET TRUE TOTAL COUNT
-    // -------------------------------
-    const firstResponse = await fetch(
-      "https://thinkimmo-api.mgraetz.de/thinkimmo",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...baseRequestBody,
-          from: 0,
-          size: 3,
-        }),
-      }
-    );
-
-    const firstData = await firstResponse.json();
-    const total = firstData.total || 0;
-
-    if (total === 0) {
-      return NextResponse.json({
-        total: 0,
-        results: [],
-        debug: { message: "No results", location, region },
-      });
+    if (!location) {
+      return NextResponse.json(
+        { error: 'Location is required' },
+        { status: 400 }
+      );
     }
 
-    // -------------------------------
-    // 2️⃣ CREATE PAGINATED TASKS
-    // -------------------------------
-    const PAGE_SIZE = 100;
-    const totalPages = Math.ceil(total / PAGE_SIZE);
+    // Determine the property type for ThinkImmo API
+    // Map frontend property types to API types
+    const apiType = type || (propertyType === 'house' ? 'HOUSEBUY' : 'APPARTMENTBUY');
 
-    const tasks = Array.from({ length: totalPages }, (_, pageIndex) => {
-      return async () => {
-        const from = pageIndex * PAGE_SIZE;
+    // Prepare the payload for ThinkImmo API
+    const payload: any = {
+      active: true,
+      type: apiType,
+      from: 0,
+      size: size,
+      sortBy: sortBy,
+      sortKey: sortKey,
+      geoSearches: {
+        geoSearchQuery: location,
+        geoSearchType: "town",
+        region: ""
+      }
+    };
 
-        // Retry loop for stability
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            const res = await fetch(
-              "https://thinkimmo-api.mgraetz.de/thinkimmo",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  ...baseRequestBody,
-                  from,
-                  size: PAGE_SIZE,
-                }),
-              }
-            );
+    // Add price filters
+    // Use budget as maxPrice if provided, otherwise use explicit maxPrice
+    if (budget) {
+      payload.maxPrice = budget;
+    } else if (maxPrice) {
+      payload.maxPrice = maxPrice;
+    }
+    
+    if (minPrice) {
+      payload.minPrice = minPrice;
+    }
 
-            const json = await res.json();
-            return json.results || [];
-          } catch (err) {
-            console.error(`⚠️ Request failed for page ${pageIndex}, attempt ${attempt + 1}`);
-            await new Promise((r) => setTimeout(r, 500));
+    // Add room filter if provided
+    if (rooms) {
+      payload.minRooms = Math.max(1, rooms - 1); // Allow one room less
+      payload.maxRooms = rooms + 2; // Allow up to 2 rooms more
+    }
+
+    // Add size filter if provided
+    if (sqm) {
+      payload.minSquareMeter = Math.max(20, sqm - 20); // Allow 20 sqm less
+      payload.maxSquareMeter = sqm + 30; // Allow 30 sqm more
+    }
+
+    console.log('ThinkImmo Request:', JSON.stringify(payload, null, 2));
+
+    // Call ThinkImmo API
+    const response = await fetch('https://thinkimmo-api.mgraetz.de/thinkimmo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error('ThinkImmo API Error:', response.status, response.statusText);
+      return NextResponse.json(
+        { 
+          error: 'Failed to fetch properties', 
+          status: response.status,
+          results: [],
+          total: 0,
+          debug: {
+            payload,
+            apiStatus: response.status
           }
-        }
+        },
+        { status: 200 } // Return 200 so frontend doesn't break
+      );
+    }
 
-        return []; // fallback
-      };
+    const data = await response.json();
+    
+    console.log('ThinkImmo Response:', {
+      total: data.total,
+      resultsCount: data.results?.length || 0
     });
 
-    // -------------------------------
-    // 3️⃣ RUN WITH CONCURRENCY LIMIT
-    // -------------------------------
-    const results = await runInBatches(tasks, 5); // ← IMPORTANT: max 5 parallel
-
-    const allResults = results.flat();
-
-    // -------------------------------
-    // 4️⃣ STRUCTURE + FILTER
-    // -------------------------------
-    const structured: Property[] = allResults.map((prop: any) => ({
-      id: prop.id || "",
-      title: prop.title || "Untitled Property",
-      buyingPrice: prop.buyingPrice || 0,
-      rooms: prop.rooms || 0,
-      squareMeter: prop.squareMeter || 0,
-      pricePerSqm:
-        prop.pricePerSqm ||
-        (prop.buyingPrice && prop.squareMeter
-          ? prop.buyingPrice / prop.squareMeter
-          : 0),
-      address: {
-        city: prop.address?.town || prop.address?.city || "",
-        postcode: prop.address?.postcode || "",
-        displayName: prop.address?.displayName || "",
-      },
-      type: prop.type,
-      images: prop.images || [],
-      locationFactor: prop.locationFactor,
-    }));
-
-    const filtered = structured.filter((p) => {
-      const budgetMatch = !budget || p.buyingPrice <= budget * 1.2;
-      const roomsMatch = !rooms || (p.rooms >= rooms - 1 && p.rooms <= rooms + 2);
-      const sqmMatch =
-        !sqm ||
-        (p.squareMeter >= sqm * 0.8 && p.squareMeter <= sqm * 1.2);
-      return p.buyingPrice > 0 && budgetMatch && roomsMatch && sqmMatch;
-    });
-
-    filtered.sort((a, b) => a.buyingPrice - b.buyingPrice);
-
+    // Return the properties data in the format the frontend expects
     return NextResponse.json({
-      total: filtered.length,
-      results: filtered,
+      total: data.total || 0,
+      results: data.results || [],
+      location: location,
       debug: {
-        thinkImmoTotal: total,
-        fetched: structured.length,
-        location,
-        region: region || null,
-      },
+        requestParams: { location, budget, rooms, sqm, propertyType },
+        thinkImmoPayload: payload,
+        resultsCount: data.results?.length || 0
+      }
     });
-  } catch (err: any) {
-    console.error("❌ ERROR:", err);
+
+  } catch (error) {
+    console.error('Properties API Error:', error);
     return NextResponse.json(
-      { error: "Server error", details: String(err) },
-      { status: 500 }
+      { 
+        error: 'Internal server error', 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        results: [],
+        total: 0
+      },
+      { status: 200 } // Return 200 so frontend doesn't break completely
     );
   }
 }
