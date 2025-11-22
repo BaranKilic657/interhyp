@@ -11,6 +11,12 @@ export default function Questions() {
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [mapZoom, setMapZoom] = useState(4);
   const [mapCenter, setMapCenter] = useState({ lat: 51.1657, lng: 10.4515 });
+  const [budgetValue, setBudgetValue] = useState('250000');
+  const [roomsValue, setRoomsValue] = useState('3');
+  const [sqmValue, setSqmValue] = useState('120');
+  const [buyPriceValue, setBuyPriceValue] = useState('300000');
+  const [constructionYearValue, setConstructionYearValue] = useState('2000');
+  const [pricePerSqmValue, setPricePerSqmValue] = useState('2500');
   const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const germanStates: Record<string, { lat: number; lng: number; zoom: number }> = {
@@ -37,10 +43,12 @@ export default function Questions() {
       id: 'propertyType',
       title: 'What type of property interests you?',
       options: [
-        { value: 'house', label: 'Single-family house', bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600', icon: '🏠' },
         { value: 'apartment', label: 'Apartment', bgColor: 'bg-gradient-to-br from-purple-400 to-purple-600', icon: '🏢' },
-        { value: 'townhouse', label: 'Townhouse', bgColor: 'bg-gradient-to-br from-pink-400 to-pink-600', icon: '🏘️' },
-        { value: 'not-sure', label: 'Not sure yet', bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600', icon: '❓' },
+        { value: 'house', label: 'House', bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600', icon: '🏠' },
+        { value: 'land', label: 'Land', bgColor: 'bg-gradient-to-br from-green-400 to-green-600', icon: '🌍' },
+        { value: 'garage', label: 'Garage', bgColor: 'bg-gradient-to-br from-yellow-400 to-yellow-600', icon: '🚗' },
+        { value: 'office', label: 'Office', bgColor: 'bg-gradient-to-br from-red-400 to-red-600', icon: '💼' },
+        { value: 'dont-know', label: 'Don\'t know yet', bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600', icon: '❓' },
       ],
     },
     {
@@ -49,14 +57,9 @@ export default function Questions() {
       isMapQuestion: true,
     },
     {
-      id: 'budget',
-      title: 'What is your approximate budget?',
-      options: [
-        { value: 'under-300k', label: 'Under €300,000', bgColor: 'bg-gradient-to-br from-indigo-400 to-indigo-600', icon: '💶' },
-        { value: '300-500k', label: '€300,000 - €500,000', bgColor: 'bg-gradient-to-br from-cyan-400 to-cyan-600', icon: '💶' },
-        { value: '500-750k', label: '€500,000 - €750,000', bgColor: 'bg-gradient-to-br from-teal-400 to-teal-600', icon: '💶' },
-        { value: 'over-750k', label: 'Over €750,000', bgColor: 'bg-gradient-to-br from-emerald-400 to-emerald-600', icon: '💶' },
-      ],
+      id: 'propertyDetails',
+      title: 'Tell us more about what you\'re looking for',
+      isPropertyDetailsQuestion: true,
     },
     {
       id: 'timeline',
@@ -236,6 +239,195 @@ export default function Questions() {
                 <MapComponent location={locationInput || 'Germany'} zoom={mapZoom} />
               </div>
             </div>
+          ) : question.isPropertyDetailsQuestion ? (
+            /* Combined Property Details: Buy Price, Square Meters, Construction Year, Price per m² */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+              {/* Buy Price Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">💶</span> Buy Price
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Price in EUR
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-gray-600">€</span>
+                  <input
+                    type="number"
+                    value={buyPriceValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 0, 50000), 10000000).toString();
+                      setBuyPriceValue(value);
+                    }}
+                    placeholder="Enter price"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="50000"
+                    max="10000000"
+                    step="50000"
+                    value={buyPriceValue}
+                    onChange={(e) => setBuyPriceValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(buyPriceValue) - 50000) / (10000000 - 50000)) * 100
+                      }%, #E5E7EB ${((parseInt(buyPriceValue) - 50000) / (10000000 - 50000)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>€50k</span>
+                    <span>€10M</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  €{Number(buyPriceValue).toLocaleString('de-DE')}
+                </p>
+              </div>
+
+              {/* Square Meters Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">📐</span> Square Meters
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Size in m²
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="number"
+                    value={sqmValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 30, 30), 2000).toString();
+                      setSqmValue(value);
+                    }}
+                    placeholder="m²"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="30"
+                    max="2000"
+                    step="10"
+                    value={sqmValue}
+                    onChange={(e) => setSqmValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(sqmValue) - 30) / (2000 - 30)) * 100
+                      }%, #E5E7EB ${((parseInt(sqmValue) - 30) / (2000 - 30)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>30 m²</span>
+                    <span>2000 m²</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  {sqmValue} m²
+                </p>
+              </div>
+
+              {/* Construction Year Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">🏗️</span> Construction Year
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Year Built
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="number"
+                    value={constructionYearValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 1900, 1900), 2024).toString();
+                      setConstructionYearValue(value);
+                    }}
+                    placeholder="Year"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="1900"
+                    max="2024"
+                    step="1"
+                    value={constructionYearValue}
+                    onChange={(e) => setConstructionYearValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(constructionYearValue) - 1900) / (2024 - 1900)) * 100
+                      }%, #E5E7EB ${((parseInt(constructionYearValue) - 1900) / (2024 - 1900)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>1900</span>
+                    <span>2024</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  {constructionYearValue}
+                </p>
+              </div>
+
+              {/* Price per m² Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">💰</span> Price per m²
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  EUR per m²
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-gray-600">€</span>
+                  <input
+                    type="number"
+                    value={pricePerSqmValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 0, 500), 50000).toString();
+                      setPricePerSqmValue(value);
+                    }}
+                    placeholder="EUR/m²"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="500"
+                    max="50000"
+                    step="500"
+                    value={pricePerSqmValue}
+                    onChange={(e) => setPricePerSqmValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(pricePerSqmValue) - 500) / (50000 - 500)) * 100
+                      }%, #E5E7EB ${((parseInt(pricePerSqmValue) - 500) / (50000 - 500)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>€500/m²</span>
+                    <span>€50k/m²</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  €{Number(pricePerSqmValue).toLocaleString('de-DE')}/m²
+                </p>
+              </div>
+            </div>
           ) : (
             /* Options Grid - Apple Style */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
@@ -308,8 +500,28 @@ export default function Questions() {
                 >
                   Next
                 </button>
+              ) : question.isPropertyDetailsQuestion ? (
+                <button
+                  onClick={() => {
+                    setAnswers({
+                      ...answers,
+                      'buyPrice': buyPriceValue,
+                      'squareMeters': sqmValue,
+                      'constructionYear': constructionYearValue,
+                      'pricePerSqm': pricePerSqmValue,
+                    });
+                    if (currentQuestion < questions.length - 1) {
+                      setCurrentQuestion(currentQuestion + 1);
+                    }
+                  }}
+                  className="px-8 py-3 bg-[#FF6600] text-white rounded-2xl font-semibold hover:bg-[#E55A00] transition-all duration-200 active:scale-95 shadow-lg shadow-orange-200/50"
+                >
+                  {currentQuestion === questions.length - 1 ? 'Show Results' : 'Next'}
+                </button>
               ) : currentQuestion === questions.length - 1 ? (
-                <Link href="/results">
+                <Link 
+                  href={`/results?propertyType=${encodeURIComponent(answers.propertyType || '')}&location=${encodeURIComponent(answers.location || locationInput)}&budget=${encodeURIComponent(answers.budget || '')}&timeline=${encodeURIComponent(answers.timeline || '')}&familySize=${encodeURIComponent(answers.familySize || '')}`}
+                >
                   <button
                     onClick={handleFinish}
                     className="px-8 py-3 bg-[#FF6600] text-white rounded-2xl font-semibold hover:bg-[#E55A00] transition-all duration-200 active:scale-95 shadow-lg shadow-orange-200/50"
