@@ -81,9 +81,33 @@ export default function Results() {
   const [sortKey, setSortKey] = useState('buyingPrice');
   const [bestValue, setBestValue] = useState(true); // Default to best value
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  
+  // Find first working image when opening a property modal
+  const openPropertyModal = (property: Property) => {
+    if (property.images && property.images.length > 0) {
+      // Check if current index is failed, if so find first working image
+      const currentIndex = imageIndexes[property.id] || 0;
+      const isCurrentFailed = failedImages[property.id]?.has(currentIndex);
+      
+      if (isCurrentFailed) {
+        // Find first non-failed image
+        let firstWorkingIndex = 0;
+        for (let i = 0; i < property.images.length; i++) {
+          if (!failedImages[property.id]?.has(i)) {
+            firstWorkingIndex = i;
+            break;
+          }
+        }
+        setImageIndexes(prev => ({ ...prev, [property.id]: firstWorkingIndex }));
+      }
+    }
+    setSelectedProperty(property);
+  };
+  
   const [selectedForComparison, setSelectedForComparison] = useState<Property[]>([]);
   const [showComparison, setShowComparison] = useState(false);
   const [imageIndexes, setImageIndexes] = useState<Record<string, number>>({});
+  const [failedImages, setFailedImages] = useState<Record<string, Set<number>>>({}); // Track failed images by property ID and image index
   const ran = useRef(false);
 
   // Get answers from URL params
@@ -598,26 +622,46 @@ export default function Results() {
 
                   {/* Property Image */}
                   <div 
-                    onClick={() => setSelectedProperty(property)}
+                    onClick={() => openPropertyModal(property)}
                     className="relative h-48 bg-gradient-to-br from-gray-200 to-gray-300 cursor-pointer group"
                   >
                     {property.images && property.images.length > 0 ? (
                       <>
-                        <img
-                          src={property.images[imageIndexes[property.id] || 0].originalUrl}
-                          alt={property.title}
-                          className="w-full h-full object-cover transition-opacity duration-300"
-                          onError={(e) => {
-                            const parent = e.currentTarget.parentElement;
-                            if (parent && !parent.querySelector('.image-placeholder')) {
-                              e.currentTarget.style.display = 'none';
-                              const placeholder = document.createElement('div');
-                              placeholder.className = 'image-placeholder w-full h-full flex items-center justify-center text-6xl absolute inset-0';
-                              placeholder.textContent = '🏠';
-                              parent.appendChild(placeholder);
-                            }
-                          }}
-                        />
+                        {(() => {
+                          const currentIndex = imageIndexes[property.id] || 0;
+                          const failed = failedImages[property.id]?.has(currentIndex);
+                          
+                          if (failed) {
+                            // Show placeholder if this specific image failed
+                            return (
+                              <div className="w-full h-full flex items-center justify-center text-6xl">
+                                <div className="text-center">
+                                  <div className="text-6xl mb-2">🏠</div>
+                                  <div className="text-xs text-gray-500">Image unavailable</div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <img
+                              src={property.images[currentIndex].originalUrl}
+                              alt={property.title}
+                              className="w-full h-full object-cover transition-opacity duration-300"
+                              onError={() => {
+                                // Mark this specific image as failed
+                                setFailedImages(prev => {
+                                  const newFailed = { ...prev };
+                                  if (!newFailed[property.id]) {
+                                    newFailed[property.id] = new Set();
+                                  }
+                                  newFailed[property.id].add(currentIndex);
+                                  return newFailed;
+                                });
+                              }}
+                            />
+                          );
+                        })()}
                         {property.images.length > 1 && (
                           <>
                             {/* Image Navigation Arrows */}
@@ -668,7 +712,7 @@ export default function Results() {
                   </div>
 
                   {/* Property Details */}
-                  <div className="p-6" onClick={() => setSelectedProperty(property)}>
+                  <div className="p-6" onClick={() => openPropertyModal(property)}>
                     <h3 className="text-xl font-bold text-[#1C1C1C] mb-2 line-clamp-2 cursor-pointer">
                       {property.title}
                     </h3>
@@ -1184,14 +1228,39 @@ export default function Results() {
             <div className="relative h-96 bg-gradient-to-br from-gray-200 to-gray-300 group">
               {selectedProperty.images && selectedProperty.images.length > 0 ? (
                 <div className="relative h-full">
-                  <img
-                    src={selectedProperty.images[imageIndexes[selectedProperty.id] || 0].originalUrl}
-                    alt={selectedProperty.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
+                  {(() => {
+                    const currentIndex = imageIndexes[selectedProperty.id] || 0;
+                    const failed = failedImages[selectedProperty.id]?.has(currentIndex);
+                    
+                    if (failed) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center text-8xl">
+                          <div className="text-center">
+                            <div className="text-8xl mb-2">🏠</div>
+                            <div className="text-sm text-gray-500">Image unavailable</div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <img
+                        src={selectedProperty.images[currentIndex].originalUrl}
+                        alt={selectedProperty.title}
+                        className="w-full h-full object-cover"
+                        onError={() => {
+                          setFailedImages(prev => {
+                            const newFailed = { ...prev };
+                            if (!newFailed[selectedProperty.id]) {
+                              newFailed[selectedProperty.id] = new Set();
+                            }
+                            newFailed[selectedProperty.id].add(currentIndex);
+                            return newFailed;
+                          });
+                        }}
+                      />
+                    );
+                  })()}
                   {selectedProperty.images.length > 1 && (
                     <>
                       {/* Image Navigation Arrows */}
