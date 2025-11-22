@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages } = await request.json();
+    const { messages, screenshot } = await request.json();
     
     const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
     
@@ -13,13 +13,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build conversation history for Gemini
-    const conversationHistory = messages.map((msg: { role: string; content: string }) => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    }));
+    console.log('Screenshot received:', screenshot ? 'Yes' : 'No');
 
-    // Call Google Gemini API
+    // Build conversation history for Gemini
+    const conversationHistory = messages.map((msg: { role: string; content: string }, index: number) => {
+      const parts: any[] = [{ text: msg.content }];
+      
+      // Add screenshot to the last user message if available
+      if (screenshot && index === messages.length - 1 && msg.role === 'user') {
+        try {
+          const base64Data = screenshot.includes(',') ? screenshot.split(',')[1] : screenshot;
+          console.log('Adding image to request, data length:', base64Data.length);
+          parts.push({
+            inline_data: {
+              mime_type: 'image/jpeg',
+              data: base64Data
+            }
+          });
+        } catch (error) {
+          console.error('Error processing screenshot:', error);
+        }
+      }
+      
+      return {
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: parts,
+      };
+    });
+
+    // Use gemini-1.5-flash which has better vision support
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_API_KEY}`,
       {
@@ -46,6 +68,8 @@ Your knowledge areas:
 - Equity building strategies
 - Real estate market insights
 - Budget optimization
+
+When a screenshot is provided, analyze the visual content to give context-aware advice about the page the user is viewing.
 
 Keep responses conversational, helpful, and encouraging. Use emojis sparingly and naturally.`
             }]

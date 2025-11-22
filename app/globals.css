@@ -28,6 +28,14 @@ body {
   font-family: var(--font-geist-sans);
 }
 
+/* Disable all animations & transitions during screenshot */
+.screenshot-freeze *,
+.screenshot-freeze *::before,
+.screenshot-freeze *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 /* Custom Animations */
 @keyframes breathe {
   0%, 100% {
@@ -99,6 +107,13 @@ button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--interhyp-orange);
   outline-offset: 2px;
+}
+
+.screenshot-freeze *,
+.screenshot-freeze *::before,
+.screenshot-freeze *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 /* ChatBot Animations */

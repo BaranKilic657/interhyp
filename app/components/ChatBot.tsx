@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import * as htmlToImage from "html-to-image";
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,12 +40,46 @@ export default function ChatBot() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    e.stopPropagation();
+    
+    const trimmedInput = inputValue.trim();
+    if (!trimmedInput || isTyping) return;
+
+    // Store input and clear immediately
+    const userMessage = trimmedInput;
+    setInputValue("");
+
+    // Capture screenshot
+    let screenshot = null;
+    try {
+      console.log("Starting screenshot capture...");
+
+      // Freeze animations to avoid distortion
+      document.documentElement.classList.add("screenshot-freeze");
+
+      // Wait a moment to ensure freeze applies
+      await new Promise((res) => setTimeout(res, 80));
+
+      // Capture full page
+      const dataUrl = await htmlToImage.toJpeg(document.documentElement, {
+        quality: 0.90,
+        backgroundColor: "#ffffff",
+        cacheBust: true,
+      });
+
+      screenshot = dataUrl;
+      console.log("Screenshot captured, length:", screenshot?.length);
+
+    } catch (error) {
+      console.error("Error capturing screenshot:", error);
+    } finally {
+      // Always unfreeze animations
+      document.documentElement.classList.remove("screenshot-freeze");
+    }
 
     // Add user message
-    const newMessages = [...messages, { role: "user" as const, content: inputValue }];
+    const newMessages = [...messages, { role: "user" as const, content: userMessage }];
     setMessages(newMessages);
-    setInputValue("");
 
     // Show typing indicator
     setIsTyping(true);
@@ -58,6 +93,7 @@ export default function ChatBot() {
         },
         body: JSON.stringify({
           messages: newMessages,
+          screenshot: screenshot, // Include screenshot
         }),
       });
 
@@ -157,7 +193,7 @@ export default function ChatBot() {
 
       {/* Chat Drawer */}
       <div
-        className={`fixed bottom-0 right-0 z-40 w-full sm:w-[420px] transition-all duration-500 ease-out
+        className={`fixed bottom-0 right-0 z-60 w-full sm:w-[420px] transition-all duration-500 ease-out
           ${
             isOpen
               ? "translate-y-0 opacity-100"
