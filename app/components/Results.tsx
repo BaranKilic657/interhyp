@@ -7,10 +7,11 @@ import Link from 'next/link';
 interface Property {
   id: string;
   title: string;
-  buyingPrice: number;
+  buyingPrice: number | null;
   rooms: number;
   squareMeter: number;
-  pricePerSqm: number;
+  pricePerSqm: number | null;
+  spPricePerSqm?: number;
   address: {
     city: string;
     postcode: string;
@@ -21,6 +22,12 @@ interface Property {
     score: number;
     population: number;
     hasUniversity: boolean;
+  };
+  aggregations?: {
+    similarListing?: {
+      buyingPrice: number;
+      pricePerSqm: number;
+    };
   };
 }
 
@@ -101,6 +108,7 @@ export default function Results() {
         }
       } catch (error) {
         console.error('Error fetching properties:', error);
+      } finally {
         setLoading(false);
       }
     };
@@ -406,6 +414,16 @@ export default function Results() {
                         src={property.images[0].originalUrl}
                         alt={property.title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            const placeholder = document.createElement('div');
+                            placeholder.className = 'w-full h-full flex items-center justify-center text-6xl';
+                            placeholder.textContent = '🏠';
+                            parent.appendChild(placeholder);
+                          }
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-6xl">
@@ -429,8 +447,19 @@ export default function Results() {
                     </p>
 
                     <div className="flex items-center justify-between mb-4">
-                      <div className="text-2xl font-bold text-[#FF6600]">
-                        {property.buyingPrice ? formatPrice(property.buyingPrice) : 'Price on request'}
+                      <div>
+                        <div className="text-2xl font-bold text-[#FF6600]">
+                          {property.buyingPrice 
+                            ? formatPrice(property.buyingPrice) 
+                            : property.aggregations?.similarListing?.buyingPrice
+                            ? formatPrice(property.aggregations.similarListing.buyingPrice)
+                            : property.spPricePerSqm && property.squareMeter
+                            ? formatPrice(Math.round(property.spPricePerSqm * property.squareMeter))
+                            : 'Price on request'}
+                        </div>
+                        {!property.buyingPrice && (property.aggregations?.similarListing?.buyingPrice || property.spPricePerSqm) && (
+                          <div className="text-xs text-gray-500 mt-1">Est. market value</div>
+                        )}
                       </div>
                     </div>
 
@@ -446,7 +475,11 @@ export default function Results() {
                     </div>
 
                     <div className="text-sm text-gray-600 mb-4">
-                      {property.pricePerSqm ? `${formatPrice(property.pricePerSqm)}/m²` : 'Price details on request'}
+                      {property.pricePerSqm 
+                        ? `${formatPrice(property.pricePerSqm)}/m²` 
+                        : property.spPricePerSqm
+                        ? `${formatPrice(Math.round(property.spPricePerSqm))}/m² (est.)`
+                        : 'Price details on request'}
                     </div>
 
                     {property.locationFactor && (
