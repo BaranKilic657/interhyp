@@ -518,7 +518,9 @@ export default function Questions() {
                   {currentQuestion === questions.length - 1 ? 'Show Results' : 'Next'}
                 </button>
               ) : currentQuestion === questions.length - 1 ? (
-                <Link href="/results">
+                <Link 
+                  href={`/results?propertyType=${encodeURIComponent(answers.propertyType || '')}&location=${encodeURIComponent(answers.location || locationInput)}&budget=${encodeURIComponent(answers.budget || '')}&timeline=${encodeURIComponent(answers.timeline || '')}&familySize=${encodeURIComponent(answers.familySize || '')}`}
+                >
                   <button
                     onClick={handleFinish}
                     className="px-8 py-3 bg-[#FF6600] text-white rounded-2xl font-semibold hover:bg-[#E55A00] transition-all duration-200 active:scale-95 shadow-lg shadow-orange-200/50"
