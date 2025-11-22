@@ -14,6 +14,7 @@ export default function ChatBot() {
     },
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [screenshots, setScreenshots] = useState<Record<number, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Tooltip engagement after 10 seconds
@@ -45,6 +46,58 @@ export default function ChatBot() {
         setIsTyping(true);
 
         try {
+          // Capture screenshot
+          let screenshot = null;
+          try {
+            // Try to find main content, fallback to body
+            const mainElement = document.querySelector('main') || document.body;
+            
+            // Temporarily hide chatbot to avoid capturing it
+            const chatbotElements = document.querySelectorAll('[class*="fixed"][class*="bottom-6"][class*="right-6"]');
+            const originalDisplays: string[] = [];
+            chatbotElements.forEach((el) => {
+              originalDisplays.push((el as HTMLElement).style.display);
+              (el as HTMLElement).style.display = 'none';
+            });
+            
+            screenshot = await htmlToImage.toPng(mainElement as HTMLElement, {
+              cacheBust: true,
+              pixelRatio: 1,
+              skipFonts: true,
+              preferredFontFormat: 'woff2',
+              includeQueryParams: true,
+              filter: (node) => {
+                // Only filter out the chatbot itself
+                if (node instanceof HTMLElement) {
+                  // Check if it's part of the chatbot by checking parent chain
+                  let current: HTMLElement | null = node;
+                  while (current) {
+                    const ariaLabel = current.getAttribute('aria-label');
+                    if (ariaLabel && (ariaLabel.includes('chat') || ariaLabel.includes('Chat'))) {
+                      return false;
+                    }
+                    current = current.parentElement;
+                  }
+                }
+                return true;
+              },
+            });
+            
+            // Restore chatbot visibility
+            chatbotElements.forEach((el, i) => {
+              (el as HTMLElement).style.display = originalDisplays[i];
+            });
+            
+            // Save screenshot for this message
+            if (screenshot) {
+              setScreenshots(prev => ({ ...prev, [newMessages.length - 1]: screenshot! }));
+              console.log('Screenshot captured successfully');
+            }
+          } catch (error) {
+            console.error('Error capturing screenshot:', error);
+            console.log('Continuing without screenshot due to rendering issues');
+          }
+
           // Try to extract profile text
           let profileText: string | null = null;
           try {
@@ -63,7 +116,7 @@ export default function ChatBot() {
             },
             body: JSON.stringify({
               messages: newMessages,
-              screenshot: null,
+              screenshot: screenshot,
               profile: profileText,
             }),
           });
@@ -72,16 +125,69 @@ export default function ChatBot() {
             throw new Error(`Failed to get response: ${response.status}`);
           }
 
-          const data = await response.json();
-          
-          setIsTyping(false);
-          setMessages([
-            ...newMessages,
-            {
-              role: "assistant" as const,
-              content: data.message,
-            },
-          ]);
+          // Check if response is streaming
+          const contentType = response.headers.get('content-type');
+          if (contentType?.includes('text/event-stream')) {
+            // Handle streaming response
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedContent = '';
+            
+            // Add placeholder message for streaming
+            const assistantMessageIndex = newMessages.length;
+            setMessages([...newMessages, { role: "assistant" as const, content: '' }]);
+            setIsTyping(false);
+            
+            if (reader) {
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  
+                  const chunk = decoder.decode(value, { stream: true });
+                  const lines = chunk.split('\\n');
+                  
+                  for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                      const data = line.slice(6);
+                      if (data === '[DONE]') break;
+                      
+                      try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.content) {
+                          accumulatedContent += parsed.content;
+                          setMessages(prev => {
+                            const updated = [...prev];
+                            updated[assistantMessageIndex] = {
+                              role: "assistant" as const,
+                              content: accumulatedContent,
+                            };
+                            return updated;
+                          });
+                        }
+                      } catch (e) {
+                        // Skip invalid JSON
+                      }
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('Streaming error:', error);
+              }
+            }
+          } else {
+            // Handle non-streaming response (fallback)
+            const data = await response.json();
+            
+            setIsTyping(false);
+            setMessages([
+              ...newMessages,
+              {
+                role: "assistant" as const,
+                content: data.message,
+              },
+            ]);
+          }
         } catch (error) {
           console.error('Error getting AI response:', error);
           setIsTyping(false);
@@ -113,6 +219,16 @@ export default function ChatBot() {
     setShowTooltip(false);
   };
 
+  const clearHistory = () => {
+    setMessages([
+      {
+        role: "assistant",
+        content: "Hi! I'm FutureGuide, your companion on the path to homeownership. How can I help you today?",
+      },
+    ]);
+    setScreenshots({});
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -127,13 +243,53 @@ export default function ChatBot() {
     // Capture screenshot of the page
     let screenshot = null;
     try {
-      const element = document.body;
-      screenshot = await htmlToImage.toPng(element, {
+      // Try to find main content, fallback to body
+      const mainElement = document.querySelector('main') || document.body;
+      
+      // Temporarily hide chatbot to avoid capturing it
+      const chatbotElements = document.querySelectorAll('[class*="fixed"][class*="bottom-6"][class*="right-6"]');
+      const originalDisplays: string[] = [];
+      chatbotElements.forEach((el) => {
+        originalDisplays.push((el as HTMLElement).style.display);
+        (el as HTMLElement).style.display = 'none';
+      });
+      
+      screenshot = await htmlToImage.toPng(mainElement as HTMLElement, {
         cacheBust: true,
         pixelRatio: 1, // Keep it at 1 for faster processing
+        skipFonts: true,
+        preferredFontFormat: 'woff2',
+        includeQueryParams: true,
+        filter: (node) => {
+          // Only filter out the chatbot itself
+          if (node instanceof HTMLElement) {
+            // Check if it's part of the chatbot by checking parent chain
+            let current: HTMLElement | null = node;
+            while (current) {
+              const ariaLabel = current.getAttribute('aria-label');
+              if (ariaLabel && (ariaLabel.includes('chat') || ariaLabel.includes('Chat'))) {
+                return false;
+              }
+              current = current.parentElement;
+            }
+          }
+          return true;
+        },
       });
+      
+      // Restore chatbot visibility
+      chatbotElements.forEach((el, i) => {
+        (el as HTMLElement).style.display = originalDisplays[i];
+      });
+      
+      // Save screenshot for this message
+      if (screenshot) {
+        setScreenshots(prev => ({ ...prev, [newMessages.length - 1]: screenshot! }));
+        console.log('Screenshot captured successfully');
+      }
     } catch (error) {
       console.error('Error capturing screenshot:', error);
+      console.log('Continuing without screenshot due to rendering issues');
       // Continue without screenshot if capture fails
     }
 
@@ -155,7 +311,7 @@ export default function ChatBot() {
         // ignore
       }
 
-      // Call the AI API
+      // Call the AI API with streaming
       console.log('Sending chat request to /api/chat with', newMessages.length, 'messages');
       
       const response = await fetch('/api/chat', {
@@ -178,17 +334,70 @@ export default function ChatBot() {
         throw new Error(`Failed to get response: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('API response received, message length:', data.message?.length);
-      
-      setIsTyping(false);
-      setMessages([
-        ...newMessages,
-        {
-          role: "assistant" as const,
-          content: data.message,
-        },
-      ]);
+      // Check if response is streaming
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedContent = '';
+        
+        // Add placeholder message for streaming
+        const assistantMessageIndex = newMessages.length;
+        setMessages([...newMessages, { role: "assistant" as const, content: '' }]);
+        setIsTyping(false);
+        
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6);
+                  if (data === '[DONE]') break;
+                  
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.content) {
+                      accumulatedContent += parsed.content;
+                      setMessages(prev => {
+                        const updated = [...prev];
+                        updated[assistantMessageIndex] = {
+                          role: "assistant" as const,
+                          content: accumulatedContent,
+                        };
+                        return updated;
+                      });
+                    }
+                  } catch (e) {
+                    // Skip invalid JSON
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Streaming error:', error);
+          }
+        }
+      } else {
+        // Handle non-streaming response (fallback)
+        const data = await response.json();
+        console.log('API response received, message length:', data.message?.length);
+        
+        setIsTyping(false);
+        setMessages([
+          ...newMessages,
+          {
+            role: "assistant" as const,
+            content: data.message,
+          },
+        ]);
+      }
     } catch (error) {
       console.error('Error getting AI response:', error);
       setIsTyping(false);
@@ -317,26 +526,50 @@ export default function ChatBot() {
               </div>
             </div>
 
-            {/* Close button in header */}
-            <button
-              onClick={toggleChat}
-              className="relative z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 transition-all duration-200 hover:scale-105"
-              aria-label="Close chat"
-            >
-              <svg
-                className="w-5 h-5 transition-transform duration-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
+            <div className="flex items-center gap-2">
+              {/* Clear history button */}
+              <button
+                onClick={clearHistory}
+                className="relative z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 transition-all duration-200 hover:scale-105"
+                aria-label="Clear chat history"
+                title="Clear chat history"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+
+              {/* Close button in header */}
+              <button
+                onClick={toggleChat}
+                className="relative z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 transition-all duration-200 hover:scale-105"
+                aria-label="Close chat"
+              >
+                <svg
+                  className="w-5 h-5 transition-transform duration-300"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Subtle divider */}
@@ -371,6 +604,41 @@ export default function ChatBot() {
                   }`}
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                  
+                  {/* Show screenshot if available for this message */}
+                  {message.role === "user" && screenshots[index] && (
+                    <div className="mt-3 pt-3 border-t border-white/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-xs font-medium">Screenshot sent with this message</span>
+                      </div>
+                      <div className="relative group">
+                        <img 
+                          src={screenshots[index]} 
+                          alt="Screenshot" 
+                          className="w-full rounded-lg border border-white/30 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(screenshots[index], '_blank')}
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const link = document.createElement('a');
+                            link.href = screenshots[index];
+                            link.download = `screenshot-${new Date().toISOString()}.png`;
+                            link.click();
+                          }}
+                          className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Download screenshot"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
