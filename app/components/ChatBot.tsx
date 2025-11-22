@@ -85,6 +85,16 @@ export default function ChatBot() {
     setIsTyping(true);
 
     try {
+      // Try to extract a visible profile summary from the page (Personal Guide shows a "Based on your profile:" paragraph)
+      let profileText: string | null = null;
+      try {
+        const pCandidates = Array.from(document.querySelectorAll('p')) as HTMLParagraphElement[];
+        const found = pCandidates.find((p) => p.textContent && p.textContent.includes('Based on your profile'));
+        if (found) profileText = found.textContent || null;
+      } catch (err) {
+        // ignore
+      }
+
       // Call the AI API
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -94,6 +104,7 @@ export default function ChatBot() {
         body: JSON.stringify({
           messages: newMessages,
           screenshot: screenshot, // Include screenshot
+          profile: profileText,
         }),
       });
 
