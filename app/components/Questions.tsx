@@ -11,6 +11,9 @@ export default function Questions() {
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [mapZoom, setMapZoom] = useState(4);
   const [mapCenter, setMapCenter] = useState({ lat: 51.1657, lng: 10.4515 });
+  const [budgetValue, setBudgetValue] = useState('250000');
+  const [roomsValue, setRoomsValue] = useState('3');
+  const [sqmValue, setSqmValue] = useState('120');
   const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const germanStates: Record<string, { lat: number; lng: number; zoom: number }> = {
@@ -49,14 +52,9 @@ export default function Questions() {
       isMapQuestion: true,
     },
     {
-      id: 'budget',
-      title: 'What is your approximate budget?',
-      options: [
-        { value: 'under-300k', label: 'Under €300,000', bgColor: 'bg-gradient-to-br from-indigo-400 to-indigo-600', icon: '💶' },
-        { value: '300-500k', label: '€300,000 - €500,000', bgColor: 'bg-gradient-to-br from-cyan-400 to-cyan-600', icon: '💶' },
-        { value: '500-750k', label: '€500,000 - €750,000', bgColor: 'bg-gradient-to-br from-teal-400 to-teal-600', icon: '💶' },
-        { value: 'over-750k', label: 'Over €750,000', bgColor: 'bg-gradient-to-br from-emerald-400 to-emerald-600', icon: '💶' },
-      ],
+      id: 'propertyDetails',
+      title: 'Tell us more about what you\'re looking for',
+      isPropertyDetailsQuestion: true,
     },
     {
       id: 'timeline',
@@ -236,6 +234,148 @@ export default function Questions() {
                 <MapComponent location={locationInput || 'Germany'} zoom={mapZoom} />
               </div>
             </div>
+          ) : question.isPropertyDetailsQuestion ? (
+            /* Combined Property Details: Budget, Rooms, Square Meters */
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              {/* Budget Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">💶</span> Budget
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Budget in EUR
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-gray-600">€</span>
+                  <input
+                    type="number"
+                    value={budgetValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 0, 50000), 10000000).toString();
+                      setBudgetValue(value);
+                    }}
+                    placeholder="Enter budget"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="50000"
+                    max="10000000"
+                    step="50000"
+                    value={budgetValue}
+                    onChange={(e) => setBudgetValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(budgetValue) - 50000) / (10000000 - 50000)) * 100
+                      }%, #E5E7EB ${((parseInt(budgetValue) - 50000) / (10000000 - 50000)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>€50k</span>
+                    <span>€10M</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  €{Number(budgetValue).toLocaleString('de-DE')}
+                </p>
+              </div>
+
+              {/* Rooms Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">🛏️</span> Rooms
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Number of Rooms
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="number"
+                    value={roomsValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 1, 1), 12).toString();
+                      setRoomsValue(value);
+                    }}
+                    placeholder="Rooms"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="1"
+                    max="12"
+                    step="1"
+                    value={roomsValue}
+                    onChange={(e) => setRoomsValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(roomsValue) - 1) / (12 - 1)) * 100
+                      }%, #E5E7EB ${((parseInt(roomsValue) - 1) / (12 - 1)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>1</span>
+                    <span>12</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  {roomsValue} {parseInt(roomsValue) === 1 ? 'Room' : 'Rooms'}
+                </p>
+              </div>
+
+              {/* Square Meters Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">📐</span> Size
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Square Meters (m²)
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="number"
+                    value={sqmValue}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseInt(e.target.value) || 30, 30), 2000).toString();
+                      setSqmValue(value);
+                    }}
+                    placeholder="m²"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="30"
+                    max="2000"
+                    step="10"
+                    value={sqmValue}
+                    onChange={(e) => setSqmValue(e.target.value)}
+                    className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                        ((parseInt(sqmValue) - 30) / (2000 - 30)) * 100
+                      }%, #E5E7EB ${((parseInt(sqmValue) - 30) / (2000 - 30)) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>30 m²</span>
+                    <span>2000 m²</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                  {sqmValue} m²
+                </p>
+              </div>
+            </div>
           ) : (
             /* Options Grid - Apple Style */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
@@ -307,6 +447,23 @@ export default function Questions() {
                   }`}
                 >
                   Next
+                </button>
+              ) : question.isPropertyDetailsQuestion ? (
+                <button
+                  onClick={() => {
+                    setAnswers({
+                      ...answers,
+                      'budget': budgetValue,
+                      'rooms': roomsValue,
+                      'squareMeters': sqmValue,
+                    });
+                    if (currentQuestion < questions.length - 1) {
+                      setCurrentQuestion(currentQuestion + 1);
+                    }
+                  }}
+                  className="px-8 py-3 bg-[#FF6600] text-white rounded-2xl font-semibold hover:bg-[#E55A00] transition-all duration-200 active:scale-95 shadow-lg shadow-orange-200/50"
+                >
+                  {currentQuestion === questions.length - 1 ? 'Show Results' : 'Next'}
                 </button>
               ) : currentQuestion === questions.length - 1 ? (
                 <Link 

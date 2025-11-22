@@ -177,3 +177,13 @@ a:focus-visible {
 .border-l-3 {
   border-left-width: 3px;
 }
+
+/* Animation delays */
+.delay-1000 {
+  animation-delay: 1s;
+}
+
+/* Animation delays */
+.delay-1000 {
+  animation-delay: 1s;
+}
