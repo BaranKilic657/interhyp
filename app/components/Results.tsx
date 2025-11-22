@@ -47,7 +47,9 @@ export default function Results() {
   // Get answers from URL params
   const propertyType = searchParams.get('propertyType') || 'apartment';
   const location = searchParams.get('location') || 'Munich';
-  const budget = searchParams.get('budget') || '300-500k';
+  const budget = searchParams.get('budget') || '400000';
+  const rooms = searchParams.get('rooms') || '3';
+  const sqm = searchParams.get('sqm') || '120';
   const timeline = searchParams.get('timeline') || '1-2y';
   const familySize = searchParams.get('familySize') || '2';
 
@@ -63,6 +65,8 @@ export default function Results() {
         console.log('=== FETCHING PROPERTIES ===');
         console.log('Location:', location);
         console.log('Budget:', budget);
+        console.log('Rooms:', rooms);
+        console.log('Sqm:', sqm);
         console.log('Property Type:', propertyType);
         
         const response = await fetch('/api/properties', {
@@ -72,7 +76,9 @@ export default function Results() {
           },
           body: JSON.stringify({
             location,
-            budget,
+            budget: parseInt(budget),
+            rooms: parseInt(rooms),
+            sqm: parseInt(sqm),
             propertyType,
           }),
         });
@@ -105,14 +111,8 @@ export default function Results() {
       console.log('Budget input:', budget);
       console.log('Timeline input:', timeline);
       
-      const budgetMap: Record<string, number> = {
-        'under-300k': 300000,
-        '300-500k': 400000,
-        '500-750k': 625000,
-        'over-750k': 875000,
-      };
-
-      const targetPrice = budgetMap[budget] || 400000;
+      // Use budget directly as it's now a numeric value
+      const targetPrice = parseInt(budget) || 400000;
       const currentYear = new Date().getFullYear();
       
       console.log('Target price:', targetPrice);
@@ -175,14 +175,8 @@ export default function Results() {
     // Calculate budget with real API
     const fetchBudgetCalculation = async () => {
       try {
-        const budgetMap: Record<string, number> = {
-          'under-300k': 300000,
-          '300-500k': 400000,
-          '500-750k': 625000,
-          'over-750k': 875000,
-        };
-
-        const targetPrice = budgetMap[budget] || 400000;
+        // Use budget directly as it's now a numeric value
+        const targetPrice = parseInt(budget) || 400000;
         
         // Estimate monthly income from budget (rough heuristic)
         const estimatedMonthlyIncome = Math.round(targetPrice / 100);
@@ -220,7 +214,7 @@ export default function Results() {
     fetchProperties();
     fetchBudgetCalculation();
     calculateRoutes();
-  }, [location, budget, propertyType, timeline]);
+  }, [location, budget, rooms, sqm, propertyType, timeline]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('de-DE', {
@@ -264,7 +258,7 @@ export default function Results() {
           </div>
 
           {/* Quick Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-12">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-12">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
               <div className="text-3xl mb-2">🏠</div>
               <div className="text-sm opacity-80 mb-1">Property Type</div>
@@ -277,13 +271,20 @@ export default function Results() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
               <div className="text-3xl mb-2">💰</div>
-              <div className="text-sm opacity-80 mb-1">Budget Range</div>
+              <div className="text-sm opacity-80 mb-1">Budget</div>
               <div className="text-lg font-semibold">
-                {budget === 'under-300k' && 'Under €300k'}
-                {budget === '300-500k' && '€300k - €500k'}
-                {budget === '500-750k' && '€500k - €750k'}
-                {budget === 'over-750k' && 'Over €750k'}
+                {formatPrice(parseInt(budget))}
               </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+              <div className="text-3xl mb-2">🛏️</div>
+              <div className="text-sm opacity-80 mb-1">Rooms</div>
+              <div className="text-lg font-semibold">{rooms}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+              <div className="text-3xl mb-2">📐</div>
+              <div className="text-sm opacity-80 mb-1">Size</div>
+              <div className="text-lg font-semibold">{sqm} m²</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
               <div className="text-3xl mb-2">👥</div>

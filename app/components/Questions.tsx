@@ -590,7 +590,7 @@ export default function Questions() {
                 </button>
               ) : currentQuestion === questions.length - 1 ? (
                 <Link 
-                  href={`/results?propertyType=${encodeURIComponent(answers.propertyType || '')}&location=${encodeURIComponent(answers.location || locationInput)}&budget=${encodeURIComponent(answers.budget || '')}&timeline=${encodeURIComponent(answers.timeline || '')}&familySize=${encodeURIComponent(answers.familySize || '')}`}
+                  href={`/results?propertyType=${encodeURIComponent(answers.propertyType || '')}&location=${encodeURIComponent(answers.location || locationInput)}&budget=${encodeURIComponent(answers.budget || budgetValue)}&rooms=${encodeURIComponent(answers.rooms || roomsValue)}&sqm=${encodeURIComponent(answers.squareMeters || sqmValue)}&timeline=${encodeURIComponent(answers.timeline || '')}&familySize=${encodeURIComponent(answers.familySize || '')}`}
                 >
                   <button
                     onClick={handleFinish}
