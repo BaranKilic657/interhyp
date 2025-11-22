@@ -81,6 +81,9 @@ export default function Results() {
   const [sortKey, setSortKey] = useState('buyingPrice');
   const [bestValue, setBestValue] = useState(true); // Default to best value
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [selectedForComparison, setSelectedForComparison] = useState<Property[]>([]);
+  const [showComparison, setShowComparison] = useState(false);
+  const [imageIndexes, setImageIndexes] = useState<Record<string, number>>({});
   const ran = useRef(false);
 
   // Get answers from URL params
@@ -301,6 +304,75 @@ export default function Results() {
     }).format(price);
   };
 
+  const calculateMonthlyTotal = (property: Property) => {
+    const price = property.buyingPrice || 
+                  (property.aggregations?.similarListing?.buyingPrice) ||
+                  (property.spPricePerSqm && property.squareMeter ? property.spPricePerSqm * property.squareMeter : 0);
+    
+    if (!price) return null;
+
+    // Assume 20% down payment
+    const loanAmount = price * 0.8;
+    // 4% annual interest rate, 30-year term
+    const monthlyInterestRate = 0.04 / 12;
+    const numberOfPayments = 30 * 12;
+    const monthlyMortgage = loanAmount * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) / 
+                           (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1);
+    
+    const houseMoney = property.houseMoney || 0;
+    const estimatedUtilities = property.squareMeter * 2.5; // €2.50 per sqm for utilities
+    
+    return {
+      mortgage: monthlyMortgage,
+      houseMoney,
+      utilities: estimatedUtilities,
+      total: monthlyMortgage + houseMoney + estimatedUtilities
+    };
+  };
+
+  const togglePropertyComparison = (property: Property) => {
+    setSelectedForComparison(prev => {
+      const isSelected = prev.find(p => p.id === property.id);
+      if (isSelected) {
+        return prev.filter(p => p.id !== property.id);
+      } else if (prev.length < 2) {
+        return [...prev, property];
+      } else {
+        // Replace the first selected property with the new one
+        return [prev[1], property];
+      }
+    });
+  };
+
+  const isSelectedForComparison = (propertyId: string) => {
+    return selectedForComparison.some(p => p.id === propertyId);
+  };
+
+  const nextImage = (propertyId: string, imageCount: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImageIndexes(prev => ({
+      ...prev,
+      [propertyId]: ((prev[propertyId] || 0) + 1) % imageCount
+    }));
+  };
+
+  const prevImage = (propertyId: string, imageCount: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImageIndexes(prev => ({
+      ...prev,
+      [propertyId]: ((prev[propertyId] || 0) - 1 + imageCount) % imageCount
+    }));
+  };
+
+  const getPropertyType = (property: Property) => {
+    if (property.rentPrice && property.rentPrice > 0) {
+      return 'rent';
+    } else if (property.buyingPrice || property.aggregations?.similarListing?.buyingPrice) {
+      return 'buy';
+    }
+    return 'unknown';
+  };
+
   const selectedRouteData = routes[selectedRoute];
 
   console.log('Results component state:', {
@@ -470,6 +542,29 @@ export default function Results() {
             </div>
           )}
 
+          {/* Comparison Bar */}
+          {selectedForComparison.length > 0 && (
+            <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 bg-gradient-to-r from-[#FF6600] to-[#FF8533] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4">
+              <span className="font-semibold">
+                {selectedForComparison.length} {selectedForComparison.length === 1 ? 'property' : 'properties'} selected
+              </span>
+              {selectedForComparison.length === 2 && (
+                <button
+                  onClick={() => setShowComparison(true)}
+                  className="px-6 py-2 bg-white text-[#FF6600] rounded-xl font-semibold hover:bg-gray-100 transition-all"
+                >
+                  Compare Properties
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedForComparison([])}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition-all"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -479,33 +574,78 @@ export default function Results() {
           ) : properties.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {properties.map((property) => (
+                {properties.map((property) => {
+                const monthlyCosts = calculateMonthlyTotal(property);
+                return (
                 <div
                   key={property.id}
-                  onClick={() => setSelectedProperty(property)}
-                  className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
+                  className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 relative"
                 >
+                  {/* Selection Checkbox */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePropertyComparison(property);
+                    }}
+                    className={`absolute top-4 left-4 z-10 w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-lg ${
+                      isSelectedForComparison(property.id)
+                        ? 'bg-[#FF6600] text-white'
+                        : 'bg-white/90 text-gray-600 hover:bg-white'
+                    }`}
+                  >
+                    {isSelectedForComparison(property.id) ? '✓' : '□'}
+                  </button>
+
                   {/* Property Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-gray-200 to-gray-300">
+                  <div 
+                    onClick={() => setSelectedProperty(property)}
+                    className="relative h-48 bg-gradient-to-br from-gray-200 to-gray-300 cursor-pointer group"
+                  >
                     {property.images && property.images.length > 0 ? (
-                      <img
-                        src={property.images[0].originalUrl}
-                        alt={property.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          const parent = e.currentTarget.parentElement;
-                          if (parent) {
-                            const placeholder = document.createElement('div');
-                            placeholder.className = 'w-full h-full flex items-center justify-center text-6xl';
-                            placeholder.textContent = '🏠';
-                            parent.appendChild(placeholder);
-                          }
-                        }}
-                      />
+                      <>
+                        <img
+                          src={property.images[imageIndexes[property.id] || 0].originalUrl}
+                          alt={property.title}
+                          className="w-full h-full object-cover transition-opacity duration-300"
+                          onError={(e) => {
+                            const parent = e.currentTarget.parentElement;
+                            if (parent && !parent.querySelector('.image-placeholder')) {
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = document.createElement('div');
+                              placeholder.className = 'image-placeholder w-full h-full flex items-center justify-center text-6xl absolute inset-0';
+                              placeholder.textContent = '🏠';
+                              parent.appendChild(placeholder);
+                            }
+                          }}
+                        />
+                        {property.images.length > 1 && (
+                          <>
+                            {/* Image Navigation Arrows */}
+                            <button
+                              onClick={(e) => prevImage(property.id, property.images!.length, e)}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            >
+                              ←
+                            </button>
+                            <button
+                              onClick={(e) => nextImage(property.id, property.images!.length, e)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            >
+                              →
+                            </button>
+                            {/* Image Counter */}
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-medium">
+                              {(imageIndexes[property.id] || 0) + 1} / {property.images.length}
+                            </div>
+                          </>
+                        )}
+                      </>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-6xl">
-                        🏠
+                      <div className="w-full h-full flex items-center justify-center text-6xl bg-gray-100">
+                        <div className="text-center">
+                          <div className="text-6xl mb-2">🏠</div>
+                          <div className="text-xs text-gray-500">No image</div>
+                        </div>
                       </div>
                     )}
                     {bestValue && property.valueScore && property.valueScore >= 70 && (
@@ -528,8 +668,8 @@ export default function Results() {
                   </div>
 
                   {/* Property Details */}
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-[#1C1C1C] mb-2 line-clamp-2">
+                  <div className="p-6" onClick={() => setSelectedProperty(property)}>
+                    <h3 className="text-xl font-bold text-[#1C1C1C] mb-2 line-clamp-2 cursor-pointer">
                       {property.title}
                     </h3>
                     <p className="text-sm text-gray-600 mb-4">
@@ -572,6 +712,48 @@ export default function Results() {
                         : 'Price details on request'}
                     </div>
 
+                    {/* Monthly Costs Breakdown */}
+                    {monthlyCosts && (
+                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-xl mb-4 border border-blue-100">
+                        <div className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                          <span>💰</span>
+                          <span>Est. Monthly Costs</span>
+                        </div>
+                        <div className="space-y-1 text-xs text-gray-600">
+                          <div className="flex justify-between">
+                            <span>Mortgage:</span>
+                            <span className="font-semibold">{formatPrice(monthlyCosts.mortgage)}</span>
+                          </div>
+                          {property.houseMoney && (
+                            <div className="flex justify-between">
+                              <span>House Money:</span>
+                              <span className="font-semibold">{formatPrice(monthlyCosts.houseMoney)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span>Est. Utilities:</span>
+                            <span className="font-semibold">{formatPrice(monthlyCosts.utilities)}</span>
+                          </div>
+                          <div className="flex justify-between pt-2 border-t border-blue-200 text-sm font-bold text-[#FF6600]">
+                            <span>Total:</span>
+                            <span>{formatPrice(monthlyCosts.total)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Costs Info */}
+                    {(property.comission || property.houseMoney) && (
+                      <div className="text-xs text-gray-500 mb-4 space-y-1">
+                        {property.comission && (
+                          <div className="flex justify-between">
+                            <span>Commission:</span>
+                            <span className="font-semibold">{property.comission.toFixed(2)}%</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {property.locationFactor && (
                       <div className="flex items-center gap-2 text-xs text-gray-500 border-t pt-4">
                         <span>Location Score:</span>
@@ -586,7 +768,8 @@ export default function Results() {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             {/* Pagination Controls */}
@@ -998,11 +1181,11 @@ export default function Results() {
             </button>
 
             {/* Image Gallery */}
-            <div className="relative h-96 bg-gradient-to-br from-gray-200 to-gray-300">
+            <div className="relative h-96 bg-gradient-to-br from-gray-200 to-gray-300 group">
               {selectedProperty.images && selectedProperty.images.length > 0 ? (
                 <div className="relative h-full">
                   <img
-                    src={selectedProperty.images[0].originalUrl}
+                    src={selectedProperty.images[imageIndexes[selectedProperty.id] || 0].originalUrl}
                     alt={selectedProperty.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -1010,9 +1193,42 @@ export default function Results() {
                     }}
                   />
                   {selectedProperty.images.length > 1 && (
-                    <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                      📷 {selectedProperty.images.length} photos
-                    </div>
+                    <>
+                      {/* Image Navigation Arrows */}
+                      <button
+                        onClick={(e) => prevImage(selectedProperty.id, selectedProperty.images!.length, e)}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-12 h-12 flex items-center justify-center transition-all text-xl"
+                      >
+                        ←
+                      </button>
+                      <button
+                        onClick={(e) => nextImage(selectedProperty.id, selectedProperty.images!.length, e)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-12 h-12 flex items-center justify-center transition-all text-xl"
+                      >
+                        →
+                      </button>
+                      {/* Image Counter */}
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium">
+                        📷 {(imageIndexes[selectedProperty.id] || 0) + 1} / {selectedProperty.images.length}
+                      </div>
+                      {/* Image Dots Indicator */}
+                      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2">
+                        {selectedProperty.images.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setImageIndexes(prev => ({ ...prev, [selectedProperty.id]: idx }));
+                            }}
+                            className={`w-2 h-2 rounded-full transition-all ${
+                              (imageIndexes[selectedProperty.id] || 0) === idx
+                                ? 'bg-white w-8'
+                                : 'bg-white/50 hover:bg-white/75'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               ) : (
@@ -1312,6 +1528,273 @@ export default function Results() {
                 </button>
                 <button className="px-6 py-4 bg-blue-100 text-blue-600 rounded-2xl font-semibold hover:bg-blue-200 transition-all">
                   Share
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Property Comparison Modal */}
+      {showComparison && selectedForComparison.length === 2 && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowComparison(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-7xl w-full max-h-[90vh] overflow-y-auto my-8 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <div className="sticky top-0 bg-white z-10 p-6 border-b flex items-center justify-between rounded-t-3xl">
+              <h2 className="text-3xl font-bold text-[#1C1C1C]">Property Comparison</h2>
+              <button
+                onClick={() => setShowComparison(false)}
+                className="bg-gray-100 hover:bg-gray-200 rounded-full p-3 transition-all"
+              >
+                <span className="text-2xl">✕</span>
+              </button>
+            </div>
+
+            {/* Comparison Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+              {selectedForComparison.map((property, index) => {
+                const monthlyCosts = calculateMonthlyTotal(property);
+                return (
+                  <div key={property.id} className="space-y-4">
+                    {/* Property Header */}
+                    <div className={`bg-gradient-to-r ${index === 0 ? 'from-blue-500 to-blue-600' : 'from-purple-500 to-purple-600'} text-white p-6 rounded-2xl`}>
+                      <div className="text-sm opacity-90 mb-1">Property {index + 1}</div>
+                      <h3 className="text-xl font-bold mb-2">{property.title}</h3>
+                      <p className="text-sm opacity-90">
+                        📍 {property.address.postcode} {property.address.city}
+                      </p>
+                    </div>
+
+                    {/* Image */}
+                    <div className="relative h-48 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl overflow-hidden group">
+                      {property.images && property.images.length > 0 ? (
+                        <>
+                          <img
+                            src={property.images[imageIndexes[property.id] || 0].originalUrl}
+                            alt={property.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                          {property.images.length > 1 && (
+                            <>
+                              <button
+                                onClick={(e) => prevImage(property.id, property.images!.length, e)}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                ←
+                              </button>
+                              <button
+                                onClick={(e) => nextImage(property.id, property.images!.length, e)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                →
+                              </button>
+                              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white px-2 py-1 rounded-full text-xs">
+                                {(imageIndexes[property.id] || 0) + 1}/{property.images.length}
+                              </div>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-6xl">
+                          🏠
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price */}
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-2xl">
+                      <div className="text-sm text-gray-600 mb-1">Purchase Price</div>
+                      <div className="text-3xl font-bold text-[#FF6600]">
+                        {property.buyingPrice 
+                          ? formatPrice(property.buyingPrice) 
+                          : property.aggregations?.similarListing?.buyingPrice
+                          ? formatPrice(property.aggregations.similarListing.buyingPrice)
+                          : property.spPricePerSqm && property.squareMeter
+                          ? formatPrice(Math.round(property.spPricePerSqm * property.squareMeter))
+                          : 'Price on request'}
+                      </div>
+                    </div>
+
+                    {/* Key Metrics */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-blue-50 p-3 rounded-xl text-center">
+                        <div className="text-2xl mb-1">🛏️</div>
+                        <div className="text-xl font-bold text-[#1C1C1C]">{property.rooms}</div>
+                        <div className="text-xs text-gray-600">Rooms</div>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-xl text-center">
+                        <div className="text-2xl mb-1">📐</div>
+                        <div className="text-xl font-bold text-[#1C1C1C]">{property.squareMeter}</div>
+                        <div className="text-xs text-gray-600">m²</div>
+                      </div>
+                      <div className="bg-orange-50 p-3 rounded-xl text-center">
+                        <div className="text-2xl mb-1">💰</div>
+                        <div className="text-xl font-bold text-[#1C1C1C]">
+                          {property.pricePerSqm 
+                            ? formatPrice(property.pricePerSqm).replace(/\s€/, '')
+                            : property.spPricePerSqm
+                            ? formatPrice(Math.round(property.spPricePerSqm)).replace(/\s€/, '')
+                            : 'N/A'}
+                        </div>
+                        <div className="text-xs text-gray-600">€/m²</div>
+                      </div>
+                    </div>
+
+                    {/* Monthly Costs */}
+                    {monthlyCosts && (
+                      <div className="bg-purple-50 p-4 rounded-2xl border border-purple-200">
+                        <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                          <span>💰</span>
+                          <span>Monthly Costs Breakdown</span>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Mortgage Payment:</span>
+                            <span className="font-semibold">{formatPrice(monthlyCosts.mortgage)}</span>
+                          </div>
+                          {property.houseMoney && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">House Money:</span>
+                              <span className="font-semibold">{formatPrice(monthlyCosts.houseMoney)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Est. Utilities:</span>
+                            <span className="font-semibold">{formatPrice(monthlyCosts.utilities)}</span>
+                          </div>
+                          <div className="flex justify-between pt-2 border-t border-purple-300 text-base font-bold text-[#FF6600]">
+                            <span>Total Monthly:</span>
+                            <span>{formatPrice(monthlyCosts.total)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Property Details */}
+                    <div className="bg-gray-50 p-4 rounded-2xl">
+                      <div className="text-sm font-semibold text-gray-700 mb-3">Property Details</div>
+                      <div className="space-y-2 text-sm">
+                        {property.constructionYear && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Built:</span>
+                            <span className="font-semibold">{property.constructionYear}</span>
+                          </div>
+                        )}
+                        {property.condition && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Condition:</span>
+                            <span className="font-semibold capitalize">{property.condition.replace('_', ' ')}</span>
+                          </div>
+                        )}
+                        {property.floor !== undefined && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Floor:</span>
+                            <span className="font-semibold">{property.floor}{property.numberOfFloors ? ` of ${property.numberOfFloors}` : ''}</span>
+                          </div>
+                        )}
+                        {property.energyEfficiencyClass && property.energyEfficiencyClass !== 'NO_INFORMATION' && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Energy Class:</span>
+                            <span className="font-semibold">{property.energyEfficiencyClass}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Features */}
+                    <div className="bg-green-50 p-4 rounded-2xl">
+                      <div className="text-sm font-semibold text-gray-700 mb-3">Features</div>
+                      <div className="flex flex-wrap gap-2">
+                        {property.lift !== undefined && (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${property.lift ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                            {property.lift ? '✓' : '✗'} Elevator
+                          </span>
+                        )}
+                        {property.balcony !== undefined && (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${property.balcony ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                            {property.balcony ? '✓' : '✗'} Balcony
+                          </span>
+                        )}
+                        {property.garden !== undefined && (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${property.garden ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                            {property.garden ? '✓' : '✗'} Garden
+                          </span>
+                        )}
+                        {property.cellar !== undefined && (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${property.cellar ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                            {property.cellar ? '✓' : '✗'} Cellar
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Location Score */}
+                    {property.locationFactor && (
+                      <div className="bg-yellow-50 p-4 rounded-2xl">
+                        <div className="text-sm font-semibold text-gray-700 mb-3">Location Analysis</div>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-600">Score:</span>
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full h-2"
+                                style={{ width: `${property.locationFactor.score}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-bold">{property.locationFactor.score}/100</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Population:</span>
+                              <span className="font-semibold">{property.locationFactor.population?.toLocaleString() || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">University:</span>
+                              <span className="font-semibold">{property.locationFactor.hasUniversity ? 'Yes ✓' : 'No'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Costs */}
+                    {property.comission && (
+                      <div className="bg-red-50 p-4 rounded-2xl">
+                        <div className="text-sm font-semibold text-gray-700 mb-2">Additional Costs</div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Agent Commission:</span>
+                          <span className="font-semibold text-red-600">{property.comission.toFixed(2)}%</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="sticky bottom-0 bg-white p-6 border-t rounded-b-3xl">
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setSelectedProperty(selectedForComparison[0])}
+                  className="flex-1 px-6 py-4 bg-blue-500 text-white rounded-2xl font-semibold hover:bg-blue-600 transition-all"
+                >
+                  View Property 1 Details
+                </button>
+                <button
+                  onClick={() => setSelectedProperty(selectedForComparison[1])}
+                  className="flex-1 px-6 py-4 bg-purple-500 text-white rounded-2xl font-semibold hover:bg-purple-600 transition-all"
+                >
+                  View Property 2 Details
                 </button>
               </div>
             </div>
