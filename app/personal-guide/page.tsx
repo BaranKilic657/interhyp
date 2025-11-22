@@ -557,14 +557,14 @@ export default function PersonalGuide() {
                         min={18}
                         max={selectedPath === 'young-professional' ? 24 : 40}
                         step={1}
-                        value={pathChoices.age || (selectedPath === 'young-professional' ? 22 : 25)}
+                        value={pathChoices.age || 18}
                         onChange={(e) => updateChoice('age', Number(e.target.value))}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF6600]"
                       />
                       <div className="flex justify-between text-sm text-gray-500">
                         <span>18</span>
                         <span className="text-2xl font-bold text-[#FF6600]">
-                          {pathChoices.age || (selectedPath === 'young-professional' ? 22 : 25)} years
+                          {pathChoices.age || 18} years
                         </span>
                         <span>{selectedPath === 'young-professional' ? '24' : '40+'}</span>
                       </div>
@@ -628,14 +628,14 @@ export default function PersonalGuide() {
                           min={pathChoices.employmentStatus === 'student' ? 0 : 1000}
                           max={pathChoices.employmentStatus === 'student' ? 2000 : 6000}
                           step={pathChoices.employmentStatus === 'student' ? 100 : 250}
-                          value={pathChoices.monthlyIncome || (pathChoices.employmentStatus === 'student' ? 800 : 2500)}
+                          value={pathChoices.monthlyIncome || (pathChoices.employmentStatus === 'student' ? 0 : 1000)}
                           onChange={(e) => updateChoice('monthlyIncome', Number(e.target.value))}
                           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF6600]"
                         />
                         <div className="flex justify-between text-sm text-gray-500">
                           <span>€{pathChoices.employmentStatus === 'student' ? '0' : '1,000'}</span>
                           <span className="text-2xl font-bold text-[#FF6600]">
-                            €{(pathChoices.monthlyIncome || (pathChoices.employmentStatus === 'student' ? 800 : 2500)).toLocaleString()}
+                            €{(pathChoices.monthlyIncome || (pathChoices.employmentStatus === 'student' ? 0 : 1000)).toLocaleString()}
                           </span>
                           <span>€{pathChoices.employmentStatus === 'student' ? '2,000' : '6,000'}+</span>
                         </div>
@@ -660,14 +660,14 @@ export default function PersonalGuide() {
                           min={0}
                           max={50000}
                           step={1000}
-                          value={pathChoices.currentSavings || 5000}
+                          value={pathChoices.currentSavings || 0}
                           onChange={(e) => updateChoice('currentSavings', Number(e.target.value))}
                           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF6600]"
                         />
                         <div className="flex justify-between text-sm text-gray-500">
                           <span>€0</span>
                           <span className="text-2xl font-bold text-[#FF6600]">
-                            €{(pathChoices.currentSavings || 5000).toLocaleString()}
+                            €{(pathChoices.currentSavings || 0).toLocaleString()}
                           </span>
                           <span>€50,000+</span>
                         </div>
@@ -852,19 +852,19 @@ export default function PersonalGuide() {
                                 min={pathChoices.propertyType === 'apartment' ? 200000 : pathChoices.propertyType === 'townhouse' ? 300000 : 400000}
                                 max={pathChoices.propertyType === 'apartment' ? 350000 : pathChoices.propertyType === 'townhouse' ? 450000 : 600000}
                                 step={10000}
-                                value={pathChoices.targetPropertyValue || (pathChoices.propertyType === 'apartment' ? 250000 : pathChoices.propertyType === 'townhouse' ? 350000 : 450000)}
+                                value={pathChoices.targetPropertyValue || (pathChoices.propertyType === 'apartment' ? 200000 : pathChoices.propertyType === 'townhouse' ? 300000 : 400000)}
                                 onChange={(e) => updateChoice('targetPropertyValue', Number(e.target.value))}
                                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF6600]"
                               />
                               <div className="flex justify-between text-sm text-gray-500">
                                 <span>€{(pathChoices.propertyType === 'apartment' ? 200 : pathChoices.propertyType === 'townhouse' ? 300 : 400)}k</span>
                                 <span className="text-2xl font-bold text-[#FF6600]">
-                                  €{((pathChoices.targetPropertyValue || (pathChoices.propertyType === 'apartment' ? 250000 : pathChoices.propertyType === 'townhouse' ? 350000 : 450000)) / 1000).toFixed(0)}k
+                                  €{((pathChoices.targetPropertyValue || (pathChoices.propertyType === 'apartment' ? 200000 : pathChoices.propertyType === 'townhouse' ? 300000 : 400000)) / 1000).toFixed(0)}k
                                 </span>
                                 <span>€{(pathChoices.propertyType === 'apartment' ? 350 : pathChoices.propertyType === 'townhouse' ? 450 : 600)}k</span>
                               </div>
                               <div className="text-xs text-gray-500 text-center mt-2">
-                                Required equity (15%): <span className="font-bold text-[#FF6600]">€{(((pathChoices.targetPropertyValue || (pathChoices.propertyType === 'apartment' ? 250000 : pathChoices.propertyType === 'townhouse' ? 350000 : 450000)) * 0.15) / 1000).toFixed(1)}k</span>
+                                Required equity (15%): <span className="font-bold text-[#FF6600]">€{(((pathChoices.targetPropertyValue || (pathChoices.propertyType === 'apartment' ? 200000 : pathChoices.propertyType === 'townhouse' ? 300000 : 400000)) * 0.15) / 1000).toFixed(1)}k</span>
                               </div>
                             </div>
                           </div>
@@ -918,14 +918,14 @@ export default function PersonalGuide() {
                                 min={pathChoices.savingsFrequency === 'monthly' ? 200 : pathChoices.savingsFrequency === 'quarterly' ? 600 : 2400}
                                 max={pathChoices.savingsFrequency === 'monthly' ? 1500 : pathChoices.savingsFrequency === 'quarterly' ? 4500 : 18000}
                                 step={pathChoices.savingsFrequency === 'monthly' ? 50 : pathChoices.savingsFrequency === 'quarterly' ? 150 : 600}
-                                value={pathChoices.savingsAmount || (pathChoices.savingsFrequency === 'monthly' ? 500 : pathChoices.savingsFrequency === 'quarterly' ? 1500 : 6000)}
+                                value={pathChoices.savingsAmount || (pathChoices.savingsFrequency === 'monthly' ? 200 : pathChoices.savingsFrequency === 'quarterly' ? 600 : 2400)}
                                 onChange={(e) => updateChoice('savingsAmount', Number(e.target.value))}
                                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF6600]"
                               />
                               <div className="flex justify-between text-sm text-gray-500">
                                 <span>€{pathChoices.savingsFrequency === 'monthly' ? '200' : pathChoices.savingsFrequency === 'quarterly' ? '600' : '2,400'}</span>
                                 <span className="text-2xl font-bold text-[#FF6600]">
-                                  €{(pathChoices.savingsAmount || (pathChoices.savingsFrequency === 'monthly' ? 500 : pathChoices.savingsFrequency === 'quarterly' ? 1500 : 6000)).toLocaleString()}
+                                  €{(pathChoices.savingsAmount || (pathChoices.savingsFrequency === 'monthly' ? 200 : pathChoices.savingsFrequency === 'quarterly' ? 600 : 2400)).toLocaleString()}
                                 </span>
                                 <span>€{pathChoices.savingsFrequency === 'monthly' ? '1,500' : pathChoices.savingsFrequency === 'quarterly' ? '4,500' : '18,000'}</span>
                               </div>
