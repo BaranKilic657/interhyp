@@ -28,6 +28,81 @@ export default function ChatBot() {
     return () => clearTimeout(timer);
   }, [isOpen]);
 
+  // Listen for external messages (from personal-guide page)
+  useEffect(() => {
+    const handleOpenChatWithMessage = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const question = customEvent.detail;
+      if (question && typeof question === 'string') {
+        // Open the chat
+        setIsOpen(true);
+        
+        // Add user message immediately
+        const newMessages = [...messages, { role: "user" as const, content: question }];
+        setMessages(newMessages);
+        
+        // Show typing indicator
+        setIsTyping(true);
+
+        try {
+          // Try to extract profile text
+          let profileText: string | null = null;
+          try {
+            const pCandidates = Array.from(document.querySelectorAll('p')) as HTMLParagraphElement[];
+            const found = pCandidates.find((p) => p.textContent && p.textContent.includes('Based on your profile'));
+            if (found) profileText = found.textContent || null;
+          } catch (err) {
+            // ignore
+          }
+
+          // Call the AI API
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messages: newMessages,
+              screenshot: null,
+              profile: profileText,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to get response: ${response.status}`);
+          }
+
+          const data = await response.json();
+          
+          setIsTyping(false);
+          setMessages([
+            ...newMessages,
+            {
+              role: "assistant" as const,
+              content: data.message,
+            },
+          ]);
+        } catch (error) {
+          console.error('Error getting AI response:', error);
+          setIsTyping(false);
+          setMessages([
+            ...newMessages,
+            {
+              role: "assistant" as const,
+              content: "Entschuldigung, ich habe gerade Verbindungsprobleme. Bitte versuche es in einem Moment erneut.",
+            },
+          ]);
+        }
+      }
+    };
+
+    window.addEventListener('openChatWithMessage', handleOpenChatWithMessage);
+
+    return () => {
+      window.removeEventListener('openChatWithMessage', handleOpenChatWithMessage);
+    };
+  }, [messages]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -49,33 +124,10 @@ export default function ChatBot() {
     const userMessage = trimmedInput;
     setInputValue("");
 
-    // Capture screenshot
+    // Capture screenshot (temporarily disabled for faster response)
     let screenshot = null;
-    try {
-      console.log("Starting screenshot capture...");
-
-      // Freeze animations to avoid distortion
-      document.documentElement.classList.add("screenshot-freeze");
-
-      // Wait a moment to ensure freeze applies
-      await new Promise((res) => setTimeout(res, 80));
-
-      // Capture full page
-      const dataUrl = await htmlToImage.toJpeg(document.documentElement, {
-        quality: 0.90,
-        backgroundColor: "#ffffff",
-        cacheBust: true,
-      });
-
-      screenshot = dataUrl;
-      console.log("Screenshot captured, length:", screenshot?.length);
-
-    } catch (error) {
-      console.error("Error capturing screenshot:", error);
-    } finally {
-      // Always unfreeze animations
-      document.documentElement.classList.remove("screenshot-freeze");
-    }
+    // Screenshot feature temporarily disabled to ensure fast chat responses
+    // Will re-enable after confirming chat works properly
 
     // Add user message
     const newMessages = [...messages, { role: "user" as const, content: userMessage }];
@@ -96,6 +148,8 @@ export default function ChatBot() {
       }
 
       // Call the AI API
+      console.log('Sending chat request to /api/chat with', newMessages.length, 'messages');
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -108,11 +162,16 @@ export default function ChatBot() {
         }),
       });
 
+      console.log('API response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`Failed to get response: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('API response received, message length:', data.message?.length);
       
       setIsTyping(false);
       setMessages([
@@ -129,7 +188,7 @@ export default function ChatBot() {
         ...newMessages,
         {
           role: "assistant" as const,
-          content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+          content: "Entschuldigung, ich habe gerade Verbindungsprobleme. Bitte versuche es in einem Moment erneut.",
         },
       ]);
     }
