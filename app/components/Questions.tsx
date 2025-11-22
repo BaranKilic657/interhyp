@@ -72,10 +72,10 @@ export default function Questions() {
       id: 'familySize',
       title: 'How many people will live in the property?',
       options: [
-        { value: '1', label: '1 person', bgColor: 'bg-gradient-to-br from-violet-400 to-violet-600', icon: '👤' },
-        { value: '2', label: '2 people', bgColor: 'bg-gradient-to-br from-fuchsia-400 to-fuchsia-600', icon: '👥' },
-        { value: '3-4', label: '3-4 people', bgColor: 'bg-gradient-to-br from-rose-400 to-rose-600', icon: '👨‍👩‍👧' },
-        { value: '5+', label: '5 or more people', bgColor: 'bg-gradient-to-br from-pink-400 to-pink-600', icon: '👨‍👩‍👧‍👦' },
+        { value: '1', label: '1 person', image: '/1-person.png' },
+        { value: '2', label: '2 people', image: '/2-people.png' },
+        { value: '3-4', label: '3-4 people', image: '/3-4-people.png' },
+        { value: '5+', label: '5 or more people', image: '/5-plus-people.png' },
       ],
     },
   ];
@@ -230,6 +230,29 @@ export default function Questions() {
                 <p className="text-sm text-gray-600">
                   Enter a German state name, city, or postal code to see it on the map.
                 </p>
+                <div className="flex justify-end pt-4">
+                  <button
+                    onClick={() => {
+                      if (locationInput.trim()) {
+                        setAnswers({
+                          ...answers,
+                          [questions[currentQuestion].id]: locationInput,
+                        });
+                        if (currentQuestion < questions.length - 1) {
+                          setCurrentQuestion(currentQuestion + 1);
+                        }
+                      }
+                    }}
+                    disabled={!locationInput.trim()}
+                    className={`px-8 py-3 rounded-2xl font-semibold transition-all duration-200 ${
+                      !locationInput.trim()
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-[#FF6600] text-white hover:bg-[#E55A00] active:scale-95 shadow-lg shadow-orange-200/50'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
 
               <div className="relative h-screen md:h-[600px] rounded-3xl overflow-hidden shadow-lg">
@@ -482,11 +505,11 @@ export default function Questions() {
                 <button
                   key={option.value}
                   onClick={() => handleAnswer(option.value)}
-                  className={`relative h-48 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer group ${
+                  className={`relative rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer group ${
                     answers[question.id] === option.value
                       ? 'ring-3 ring-[#FF6600] shadow-lg'
                       : 'hover:shadow-md'
-                  } bg-gray-100`}
+                  } bg-gray-100 ${question.id === 'familySize' ? 'h-56' : 'h-48'}`}
                 >
                   {/* Background Image */}
                   {'image' in option && option.image && (
@@ -519,6 +542,7 @@ export default function Questions() {
           )}
 
           {/* Navigation Buttons */}
+          {!question.isMapQuestion && (
           <div className="flex gap-4 justify-between items-center">
             <button
               onClick={handlePrevious}
@@ -533,29 +557,7 @@ export default function Questions() {
             </button>
 
             <div className="flex-1 flex justify-end">
-              {question.isMapQuestion ? (
-                <button
-                  onClick={() => {
-                    if (locationInput.trim()) {
-                      setAnswers({
-                        ...answers,
-                        [questions[currentQuestion].id]: locationInput,
-                      });
-                      if (currentQuestion < questions.length - 1) {
-                        setCurrentQuestion(currentQuestion + 1);
-                      }
-                    }
-                  }}
-                  disabled={!locationInput.trim()}
-                  className={`px-8 py-3 rounded-2xl font-semibold transition-all duration-200 ${
-                    !locationInput.trim()
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-[#FF6600] text-white hover:bg-[#E55A00] active:scale-95 shadow-lg shadow-orange-200/50'
-                  }`}
-                >
-                  Next
-                </button>
-              ) : question.isPropertyDetailsQuestion ? (
+              {question.isPropertyDetailsQuestion ? (
                 <button
                   onClick={() => {
                     setAnswers({
@@ -614,6 +616,7 @@ export default function Questions() {
               )}
             </div>
           </div>
+          )}
         </div>
       </section>
     </main>
