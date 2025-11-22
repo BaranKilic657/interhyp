@@ -504,6 +504,12 @@ export async function POST(request: NextRequest) {
                             property.aggregations?.similarListing?.buyingPrice ||
                             (property.spPricePerSqm && property.squareMeter ? property.spPricePerSqm * property.squareMeter : null);
 
+      // CRITICAL: Filter by budget if provided
+      if (budget && estimatedPrice && estimatedPrice > budget) {
+        console.log('Filtered out: exceeds budget', estimatedPrice, '€ > budget', budget, '€');
+        return false;
+      }
+
       // Filter out properties with unrealistic low prices per sqm
       if (estimatedPrice && property.squareMeter > 0) {
         const pricePerSqm = estimatedPrice / property.squareMeter;
