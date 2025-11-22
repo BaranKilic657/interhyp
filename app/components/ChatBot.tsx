@@ -37,7 +37,7 @@ export default function ChatBot() {
     setShowTooltip(false);
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
@@ -49,17 +49,43 @@ export default function ChatBot() {
     // Show typing indicator
     setIsTyping(true);
 
-    // Simulate AI response with realistic delay
-    setTimeout(() => {
+    try {
+      // Call the AI API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: newMessages,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+      
       setIsTyping(false);
       setMessages([
         ...newMessages,
         {
           role: "assistant" as const,
-          content: getSimulatedResponse(inputValue),
+          content: data.message,
         },
       ]);
-    }, 1200);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      setIsTyping(false);
+      setMessages([
+        ...newMessages,
+        {
+          role: "assistant" as const,
+          content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+        },
+      ]);
+    }
   };
 
   // Simulated responses based on keywords
@@ -230,7 +256,7 @@ export default function ChatBot() {
                       : "bg-[#FAFAFA] text-[#1C1C1C] rounded-2xl rounded-bl-md border-l-3 border-l-[#FF6600] shadow-sm"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 </div>
               </div>
             ))}
@@ -274,7 +300,7 @@ export default function ChatBot() {
               
               <button
                 type="submit"
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isTyping}
                 className="w-12 h-12 bg-gradient-to-br from-[#FF6600] to-[#FF7019] text-white rounded-2xl
                   hover:shadow-lg hover:scale-105
                   transition-all duration-200 

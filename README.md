@@ -268,7 +268,7 @@ Minimal. Elegant. On brand. Powerful.
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 19+ and npm
 - A modern web browser
 
 ### Installation
