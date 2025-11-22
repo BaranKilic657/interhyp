@@ -38,7 +38,7 @@ export default function Home() {
 
               {/* CTA Section */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4">
-                <Link href="/journey">
+                <Link href="/questions">
                   <button
                     className="group relative px-8 py-4 bg-[#FF6600] text-white font-semibold text-lg rounded-full 
                     transition-all duration-300 ease-out
