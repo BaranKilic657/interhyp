@@ -21,6 +21,9 @@ export default function Questions() {
   const [equityValue, setEquityValue] = useState('50000');
   const [monthlyBudgetValue, setMonthlyBudgetValue] = useState('2000');
   const [maxPriceValue, setMaxPriceValue] = useState('500000');
+  const [ageValue, setAgeValue] = useState('30');
+  const [genderValue, setGenderValue] = useState('');
+  const [occupationValue, setOccupationValue] = useState('');
   const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const germanStates: Record<string, { lat: number; lng: number; zoom: number }> = {
@@ -70,6 +73,11 @@ export default function Questions() {
       id: 'timeline',
       title: 'What is your timeline for buying?',
       isTimelineQuestion: true,
+    },
+    {
+      id: 'demographics',
+      title: 'Tell us a bit about yourself',
+      isDemographicsQuestion: true,
     },
     {
       id: 'familySize',
@@ -439,6 +447,125 @@ export default function Questions() {
                 </div>
               </div>
             </div>
+          ) : question.isDemographicsQuestion ? (
+            /* Demographics Question with Age, Gender, Occupation */
+            <div className="space-y-8 mb-12 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Age Section */}
+                <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-3xl">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <span className="text-2xl">🎂</span> Your Age
+                  </h3>
+                  <label className="block text-sm font-medium text-gray-700">
+                    How old are you?
+                  </label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="number"
+                      value={ageValue}
+                      onChange={(e) => {
+                        const value = Math.min(Math.max(parseInt(e.target.value) || 18, 18), 80).toString();
+                        setAgeValue(value);
+                      }}
+                      placeholder="Age"
+                      className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-bold transition-colors placeholder:text-gray-400 text-black"
+                    />
+                    <span className="text-gray-600 text-lg font-semibold">years</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="18"
+                      max="80"
+                      step="1"
+                      value={ageValue}
+                      onChange={(e) => setAgeValue(e.target.value)}
+                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+                          ((parseInt(ageValue) - 18) / (80 - 18)) * 100
+                        }%, #E5E7EB ${((parseInt(ageValue) - 18) / (80 - 18)) * 100}%, #E5E7EB 100%)`
+                      }}
+                    />
+                    <div className="flex justify-between text-xs text-gray-600">
+                      <span>18 years</span>
+                      <span>80 years</span>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-[#FF6600] pt-2">
+                    {ageValue} years old
+                  </p>
+                </div>
+
+                {/* Gender Section */}
+                <div className="space-y-4 p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-3xl">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <span className="text-2xl">👤</span> Gender
+                  </h3>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Select your gender (optional)
+                  </label>
+                  <div className="space-y-2">
+                    {['Male', 'Female', 'Non-binary', 'Prefer not to say'].map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => setGenderValue(option)}
+                        className={`w-full px-4 py-3 rounded-xl font-medium transition-all ${
+                          genderValue === option
+                            ? 'bg-[#FF6600] text-white shadow-md'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Occupation Section */}
+              <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-3xl">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <span className="text-2xl">💼</span> Occupation
+                </h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  What do you do for work?
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    'Employee',
+                    'Self-employed',
+                    'Civil servant',
+                    'Freelancer',
+                    'Student',
+                    'Retiree',
+                    'Entrepreneur',
+                    'Other',
+                  ].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => setOccupationValue(option)}
+                      className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                        occupationValue === option
+                          ? 'bg-[#FF6600] text-white shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                {occupationValue === 'Other' && (
+                  <input
+                    type="text"
+                    placeholder="Please specify..."
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-[#FF6600] focus:outline-none font-medium transition-colors placeholder:text-gray-400 text-black mt-3"
+                    onChange={(e) => setOccupationValue(e.target.value)}
+                  />
+                )}
+              </div>
+            </div>
           ) : question.isTimelineQuestion ? (
             /* Timeline Question with Slider */
             <div className="flex justify-center">
@@ -748,9 +875,31 @@ export default function Questions() {
                 >
                   {currentQuestion === questions.length - 1 ? 'Show Results' : 'Next'}
                 </button>
+              ) : question.isDemographicsQuestion ? (
+                <button
+                  onClick={() => {
+                    setAnswers({
+                      ...answers,
+                      'age': ageValue,
+                      'gender': genderValue || 'not specified',
+                      'occupation': occupationValue || 'not specified',
+                    });
+                    if (currentQuestion < questions.length - 1) {
+                      setCurrentQuestion(currentQuestion + 1);
+                    }
+                  }}
+                  disabled={!ageValue || !occupationValue}
+                  className={`px-8 py-3 rounded-2xl font-semibold transition-all duration-200 ${
+                    !ageValue || !occupationValue
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-[#FF6600] text-white hover:bg-[#E55A00] active:scale-95 shadow-lg shadow-orange-200/50'
+                  }`}
+                >
+                  {currentQuestion === questions.length - 1 ? 'Show Results' : 'Next'}
+                </button>
               ) : question.isBudgetCalculatorQuestion ? (
                 <Link 
-                  href={`/results?propertyType=${encodeURIComponent(answers.propertyType || '')}&location=${encodeURIComponent(answers.location || locationInput)}&budget=${encodeURIComponent(affordablePrice.toString())}&rooms=${encodeURIComponent(answers.rooms || roomsValue)}&sqm=${encodeURIComponent(answers.squareMeters || sqmValue)}&timeline=${encodeURIComponent(answers.timeline || '')}&familySize=${encodeURIComponent(answers.familySize || '')}`}
+                  href={`/results?propertyType=${encodeURIComponent(answers.propertyType || '')}&location=${encodeURIComponent(answers.location || locationInput)}&budget=${encodeURIComponent(affordablePrice.toString())}&rooms=${encodeURIComponent(answers.rooms || roomsValue)}&sqm=${encodeURIComponent(answers.squareMeters || sqmValue)}&timeline=${encodeURIComponent(answers.timeline || '')}&familySize=${encodeURIComponent(answers.familySize || '')}&age=${encodeURIComponent(answers.age || ageValue)}&gender=${encodeURIComponent(answers.gender || genderValue || 'not specified')}&occupation=${encodeURIComponent(answers.occupation || occupationValue || 'not specified')}&equity=${encodeURIComponent(equityValue)}&monthlyBudget=${encodeURIComponent(monthlyBudgetValue)}`}
                 >
                   <button
                     onClick={handleFinish}
