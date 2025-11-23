@@ -444,14 +444,6 @@ export default function Results() {
 
   return (
     <main className="flex-1 bg-white">
-      {/* Debug info - remove after testing */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-yellow-100 p-4 text-xs">
-          <strong>Debug:</strong> Properties: {properties.length}, Loading: {loading ? 'yes' : 'no'}, 
-          Routes: {routes.length}, Budget Calc: {budgetCalculation ? 'loaded' : 'not loaded'}
-        </div>
-      )}
-
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-[#FF6600] to-[#FF8533] text-white py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -516,7 +508,7 @@ export default function Results() {
                 Available Properties in {location}
               </h2>
               <p className="text-lg text-gray-600">
-                {loading ? 'Loading...' : `Showing ${properties.length} of ${totalResults.toLocaleString()} properties`}
+                {loading ? 'Loading...' : `Showing ${properties.filter(p => p.images && p.images.length > 0).length} of ${totalResults.toLocaleString()} properties`}
               </p>
             </div>
             <Link href="/questions">

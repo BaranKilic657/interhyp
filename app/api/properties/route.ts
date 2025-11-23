@@ -408,7 +408,12 @@ export async function POST(request: NextRequest) {
     const from = (page - 1) * size;
 
     // If best value sorting is enabled, fetch more results to allow better sorting after filtering
-    const fetchSize = bestValue ? size * 3 : size; // Fetch 3x to compensate for filtering
+    // Ensure we fetch at least 20 results per page minimum after filtering
+    // Since we filter out ~90% of results, we need to fetch much more
+    const minResultsPerPage = 20;
+    const filterMultiplier = 10; // Expect ~10% to pass filters
+    const totalResultsNeeded = page * minResultsPerPage * filterMultiplier;
+    const fetchSize = bestValue ? Math.max(totalResultsNeeded, size * filterMultiplier) : size; // Fetch 10x to compensate for filtering
     const fetchFrom = bestValue ? 0 : from; // Always start from 0 for best value to ensure consistency
 
     // Prepare the payload for ThinkImmo API
@@ -488,13 +493,13 @@ export async function POST(request: NextRequest) {
     // Filter out unrealistic or invalid properties
     const filteredResults = (data.results || []).filter((property: any) => {
       // Filter out properties with unrealistic square meters
-      if (property.squareMeter > 10000) {
+      if (property.squareMeter && property.squareMeter > 10000) {
         console.log('Filtered out: unrealistic size', property.squareMeter, 'm²');
         return false;
       }
 
       // Filter out properties with unrealistic small sizes for apartments/houses
-      if (property.squareMeter < 15) {
+      if (property.squareMeter && property.squareMeter < 15) {
         console.log('Filtered out: too small', property.squareMeter, 'm²');
         return false;
       }
@@ -504,18 +509,18 @@ export async function POST(request: NextRequest) {
                             property.aggregations?.similarListing?.buyingPrice ||
                             (property.spPricePerSqm && property.squareMeter ? property.spPricePerSqm * property.squareMeter : null);
 
-      // CRITICAL: Filter by budget if provided
-      if (budget && estimatedPrice && estimatedPrice > budget) {
-        console.log('Filtered out: exceeds budget', estimatedPrice, '€ > budget', budget, '€');
+      // Filter by budget if provided (only if we can determine price)
+      if (budget && estimatedPrice && estimatedPrice > budget * 1.1) { // Allow 10% over budget
+        console.log('Filtered out: significantly exceeds budget', estimatedPrice, '€ > budget', budget, '€');
         return false;
       }
 
-      // Filter out properties with unrealistic low prices per sqm
+      // Only filter price/sqm if we have a valid estimated price
       if (estimatedPrice && property.squareMeter > 0) {
         const pricePerSqm = estimatedPrice / property.squareMeter;
         
-        // Filter if price per sqm is less than 100€ (likely data error)
-        if (pricePerSqm < 100) {
+        // Filter if price per sqm is less than 50€ (likely data error) - reduced from 100€
+        if (pricePerSqm < 50) {
           console.log('Filtered out: unrealistic price/m²', pricePerSqm.toFixed(2), '€/m²');
           return false;
         }
@@ -527,10 +532,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Filter out properties with unrealistic total prices
+      // Only filter prices if we have a valid estimated price
       if (estimatedPrice) {
-        // Too cheap (less than 10,000€)
-        if (estimatedPrice < 10000) {
+        // Too cheap (less than 5,000€) - reduced from 10,000€
+        if (estimatedPrice < 5000) {
           console.log('Filtered out: unrealistic low price', estimatedPrice, '€');
           return false;
         }
@@ -673,19 +678,21 @@ export async function POST(request: NextRequest) {
 
     // Return the properties data in the format the frontend expects
     return NextResponse.json({
-      total: data.total || 0,
+      total: filteredResults.length, // Use filtered count, not API total
       results: finalResults,
       location: normalizedLocation,
       originalLocation: location,
       page: page,
       pageSize: size,
-      totalPages: Math.ceil((data.total || 0) / size),
-      hasMore: from + size < (data.total || 0),
+      totalPages: Math.ceil(filteredResults.length / size), // Calculate based on filtered results
+      hasMore: (page * size) < filteredResults.length,
       debug: {
         requestParams: { location, normalizedLocation, budget, rooms, sqm, propertyType, page, bestValue },
         thinkImmoPayload: payload,
+        apiTotal: data.total || 0,
         resultsCount: data.results?.length || 0,
-        filteredCount: filteredResults.length
+        filteredCount: filteredResults.length,
+        finalCount: finalResults.length
       }
     });
 
